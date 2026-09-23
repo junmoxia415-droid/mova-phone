@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
@@ -165,6 +166,15 @@ fun LocationRoute(
 
             item {
                 MovaSecondaryButton(
+                    text = "Ver en mapa",
+                    icon = Icons.Filled.Place,
+                    enabled = state.hasFix,
+                    onClick = { openInMaps(context, state.coordinates) }
+                )
+            }
+
+            item {
+                MovaSecondaryButton(
                     text = "Ver historial de ubicaciones",
                     onClick = { navigator.toLocationHistory() }
                 )
@@ -230,6 +240,15 @@ private fun copyToClipboard(context: Context, value: String) {
     if (value.isBlank()) return
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
     clipboard.setPrimaryClip(ClipData.newPlainText("Ubicación MOVA Phone", value))
+}
+
+/** Abre las coordenadas en la app de mapas que el usuario tenga instalada. */
+private fun openInMaps(context: android.content.Context, coordinates: String) {
+    val parts = coordinates.split(",")
+    if (parts.size != 2) return
+    val uri = android.net.Uri.parse("geo:" + parts[0].trim() + "," + parts[1].trim() + "?q=" +
+        parts[0].trim() + "," + parts[1].trim())
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
 }
 
 private fun shareLocation(context: Context, text: String) {

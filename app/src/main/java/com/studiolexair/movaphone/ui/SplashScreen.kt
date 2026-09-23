@@ -46,10 +46,16 @@ fun SplashScreen(onReady: () -> Unit) {
                 modifier = Modifier.padding(top = MovaDimens.spaceLg)
             )
             Text(
+                text = "Cargando…",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = MovaDimens.spaceXxl)
+            )
+            Text(
                 text = BrandConfig.DEVELOPER_CREDIT,
                 style = MaterialTheme.typography.labelSmall,
                 color = MovaTheme.extra.textMuted,
-                modifier = Modifier.padding(top = MovaDimens.spaceXxl)
+                modifier = Modifier.padding(top = MovaDimens.spaceMd)
             )
         }
     }

@@ -64,7 +64,7 @@ fun AppLockGate(container: MovaContainer, settings: MovaSettings) {
                 modifier = Modifier.padding(top = MovaDimens.spaceLg)
             )
             Text(
-                text = "Tu información está protegida en este dispositivo.",
+                text = "Verifica tu identidad. Coloca tu huella o mira a la cámara.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MovaTheme.extra.textSecondary,
                 modifier = Modifier.padding(top = MovaDimens.spaceSm)
