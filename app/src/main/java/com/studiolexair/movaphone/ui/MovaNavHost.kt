@@ -165,6 +165,8 @@ fun MovaNavHost(
 
         composable(MovaRoutes.MESSAGES) { MessagesRoute(navigator, viewModel(factory = container.messagesFactory)) }
 
+        composable(MovaRoutes.TEMPLATES) { TemplatesRoute(viewModel(factory = container.messagesFactory)) }
+
         composable(
             route = MovaRoutes.CONVERSATION,
             arguments = listOf(navArgument("address") { type = NavType.StringType })
@@ -177,8 +179,6 @@ fun MovaNavHost(
                 contactName = container.contactNameCache.resolve(address)
             )
         }
-
-        composable(MovaRoutes.TEMPLATES) { TemplatesRoute(viewModel(factory = container.messagesFactory)) }
 
         composable(MovaRoutes.LOCATION) { LocationRoute(navigator, viewModel(factory = container.locationFactory)) }
 

@@ -20,7 +20,7 @@ object MovaRoutes {
     const val EMERGENCY_CONTACTS = "emergency/contacts"
 
     const val MESSAGES = "messages"
-    const val CONVERSATION = "messages/{address}"
+    const val CONVERSATION = "messages/chat/{address}"
     const val TEMPLATES = "messages/templates"
 
     const val LOCATION = "location"
@@ -46,7 +46,7 @@ object MovaRoutes {
     const val MORE = "more"
 
     fun contactDetail(id: Long) = "contacts/$id"
-    fun conversation(address: String) = "messages/${java.net.URLEncoder.encode(address, "UTF-8")}"
+    fun conversation(address: String) = "messages/chat/${java.net.URLEncoder.encode(address, "UTF-8")}"
     fun settingsSection(section: String) = "settings/$section"
     fun automationEditor(ruleId: Long?) = "automation/editor?ruleId=${ruleId ?: 0L}"
     fun contactEdit(contactId: Long?) = "contacts/edit?contactId=${contactId ?: 0L}"
