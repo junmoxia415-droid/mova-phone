@@ -51,6 +51,12 @@ class PlaceCallUseCase(private val launcher: CallLauncher) {
         if (!launcher.canPlaceCalls()) {
             return failure(ErrorCode.NOT_SUPPORTED, "Este dispositivo no admite llamadas telefónicas.")
         }
+        if (!launcher.hasCallPermission()) {
+            return failure(
+                ErrorCode.PERMISSION_DENIED,
+                "Concede el permiso de llamadas para marcar desde MOVA Phone."
+            )
+        }
         return try {
             if (launcher.placeCall(number)) MovaResult.Success(Unit)
             else failure(ErrorCode.PERMISSION_DENIED, "MOVA Phone necesita permiso para realizar llamadas.")

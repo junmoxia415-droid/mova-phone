@@ -36,6 +36,24 @@ interface MessageDao {
     @Query("UPDATE messages SET state = :state WHERE id = :id")
     suspend fun updateState(id: Long, state: String)
 
+    @Query("SELECT systemMessageId FROM messages WHERE systemMessageId IS NOT NULL")
+    suspend fun existingSystemIds(): List<Long>
+
+    @Query("SELECT * FROM messages WHERE id = :id LIMIT 1")
+    suspend fun byId(id: Long): MessageEntity?
+
+    @Query("UPDATE messages SET state = 'READ' WHERE normalizedAddress = :normalizedAddress AND isIncoming = 1")
+    suspend fun markIncomingRead(normalizedAddress: String)
+
+    @Query("SELECT COUNT(*) FROM messages WHERE normalizedAddress = :normalizedAddress AND isIncoming = 1 AND state = 'RECEIVED'")
+    fun observeUnreadCount(normalizedAddress: String): Flow<Int>
+
+    @Query(
+        "SELECT id FROM messages WHERE normalizedAddress = :normalizedAddress AND isIncoming = 0 " +
+            "AND state = 'FAILED' ORDER BY sentAt DESC LIMIT 1"
+    )
+    suspend fun lastFailedOutgoingId(normalizedAddress: String): Long?
+
     @Query("DELETE FROM messages WHERE id = :id")
     suspend fun deleteById(id: Long)
 

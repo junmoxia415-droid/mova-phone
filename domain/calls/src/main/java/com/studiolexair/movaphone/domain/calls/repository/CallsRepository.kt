@@ -28,6 +28,9 @@ interface SpamClassifier {
 /** Marcación mediante APIs oficiales de Android (ACTION_CALL / ACTION_DIAL). */
 interface CallLauncher {
     suspend fun placeCall(number: String): Boolean
+
+    /** ¿Hay permiso para llamar directamente, sin pasar por el marcador del sistema? */
+    fun hasCallPermission(): Boolean
     fun openDialer(number: String): Boolean
     fun canPlaceCalls(): Boolean
 }

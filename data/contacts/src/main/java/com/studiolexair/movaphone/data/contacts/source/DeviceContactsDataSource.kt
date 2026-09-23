@@ -13,6 +13,13 @@ import com.studiolexair.movaphone.core.logging.MovaLog
  */
 class DeviceContactsDataSource(private val context: Context) {
 
+    /** ¿Tenemos permiso para leer la agenda del sistema en este momento? */
+    fun hasPermission(): Boolean =
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.READ_CONTACTS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
     fun readAll(): List<ContactEntity> {
         val resolver: ContentResolver = context.contentResolver
         val now = System.currentTimeMillis()
@@ -57,8 +64,9 @@ class DeviceContactsDataSource(private val context: Context) {
                 }
             }
         } catch (security: SecurityException) {
+            // Sin permiso no se rompe nada: la UI pide READ_CONTACTS y vuelve a sincronizar.
             MovaLog.w(TAG, "Sin permiso para leer contactos del sistema")
-            throw security
+            return emptyList()
         } catch (t: Throwable) {
             MovaLog.e(TAG, "Fallo leyendo la agenda del sistema", t)
         }

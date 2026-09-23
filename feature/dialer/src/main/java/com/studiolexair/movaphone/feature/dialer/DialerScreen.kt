@@ -29,6 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,6 +52,9 @@ import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaPalette
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.MovaPermission
+import com.studiolexair.movaphone.core.permissions.PermissionPrompt
+import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
 
 /**
  * Marcador: teclado grande, háptica configurable, sugerencias en vivo y acciones
@@ -62,24 +69,57 @@ fun DialerRoute(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Permiso de llamadas: se pide al pulsar "llamar" y la llamada se reintenta sola.
+    val callPermission = rememberPermissionHandle(listOf(MovaPermission.CALL_PHONE))
+    var pendingNumber by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(callPermission.granted) {
+        if (callPermission.granted) {
+            val pending = pendingNumber
+            pendingNumber = null
+            if (pending != null) viewModel.call(pending)
+        }
+    }
 
     // Si se llega con un número (contacto, historial, asistente) se escribe solo.
     LaunchedEffect(prefill) {
         if (prefill.isNotBlank()) viewModel.setInput(prefill)
     }
-    val context = LocalContext.current
+
+    val startCall: (String) -> Unit = { number ->
+        if (callPermission.granted) {
+            viewModel.call(number)
+        } else {
+            pendingNumber = number
+            callPermission.request()
+        }
+    }
+
     DialerScreen(
         state = state,
         navigator = navigator,
         hapticEnabled = hapticEnabled,
         onKeyPressed = viewModel::onKeyPressed,
-        onCall = { viewModel.call() },
-        onCallNumber = { number -> viewModel.call(number) },
+        onCall = { startCall(state.input) },
+        onCallNumber = { number -> startCall(number) },
         onCopy = { number -> copyToClipboard(context, number) },
         onBlock = viewModel::blockCurrentNumber,
         onReportSpam = viewModel::reportSpam,
         onSaveContact = { name -> viewModel.saveAsContact(name) },
         onDismissMessage = viewModel::clearMessage,
+        permissionCard = if (callPermission.granted) {
+            null
+        } else {
+            {
+                PermissionPrompt(
+                    permissions = listOf(MovaPermission.CALL_PHONE),
+                    title = "Permiso para llamar",
+                    onRequest = { callPermission.request() }
+                )
+            }
+        },
         modifier = modifier
     )
 }
@@ -97,11 +137,13 @@ fun DialerScreen(
     onReportSpam: () -> Unit,
     onSaveContact: (String) -> Unit,
     onDismissMessage: () -> Unit,
+    permissionCard: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val extra = MovaTheme.extra
     val haptics = LocalHapticFeedback.current
     AuroraBackground(modifier = modifier) {
+        permissionCard?.invoke()
         Column(
             modifier = Modifier
                 .fillMaxSize()

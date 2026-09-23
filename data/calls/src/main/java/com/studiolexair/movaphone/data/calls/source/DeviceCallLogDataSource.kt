@@ -13,7 +13,21 @@ import com.studiolexair.movaphone.domain.calls.model.CallType
  */
 class DeviceCallLogDataSource(private val context: Context) {
 
+    /** ¿Tenemos permiso para leer el historial del sistema? */
+    fun hasPermission(): Boolean =
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.READ_CALL_LOG
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
     fun readRecent(limit: Int = 200): List<CallRecordEntity> {
+        if (!hasPermission()) {
+            com.studiolexair.movaphone.core.logging.MovaLog.w(
+                "DeviceCallLog",
+                "Sin permiso READ_CALL_LOG: no se lee el historial del sistema"
+            )
+            return emptyList()
+        }
         val results = mutableListOf<CallRecordEntity>()
         val projection = arrayOf(
             CallLog.Calls._ID,

@@ -15,11 +15,13 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Emergency
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,7 +55,10 @@ fun MoreHubRoute(navigator: MovaNavigator, modifier: Modifier = Modifier) {
         HubAction("Favoritos", Icons.Filled.Star) { navigator.toFavorites() },
         HubAction("Historial", Icons.Filled.Call) { navigator.toCalls() },
         HubAction("Contactos", Icons.Filled.Contacts) { navigator.toContacts() },
-        HubAction("Ajustes", Icons.Filled.Settings) { navigator.toSettings() }
+        HubAction("Permisos", Icons.Filled.VerifiedUser) { navigator.toPermissions() },
+        HubAction("Ajustes", Icons.Filled.Settings) { navigator.toSettings() },
+        HubAction("Acerca de", Icons.Filled.Info) { navigator.toAbout() },
+        HubAction("Créditos", Icons.Filled.Star) { navigator.toCredits() }
     )
     val accents = listOf(
         MovaTheme.extra.tileGradientBlue, MovaTheme.extra.tileGradientGreen,

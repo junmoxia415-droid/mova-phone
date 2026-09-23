@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,9 @@ import com.studiolexair.movaphone.core.designsystem.component.PillTone
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.MovaPermission
+import com.studiolexair.movaphone.core.permissions.PermissionPrompt
+import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
 import com.studiolexair.movaphone.domain.calls.model.CallRecord
 import com.studiolexair.movaphone.domain.calls.model.CallType
 import com.studiolexair.movaphone.domain.calls.usecase.CallFilter
@@ -55,6 +59,13 @@ fun CallsRoute(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Con permiso se importa el historial real del dispositivo automáticamente.
+    val logPermission = rememberPermissionHandle(listOf(MovaPermission.CALL_LOG))
+    LaunchedEffect(logPermission.granted) {
+        if (logPermission.granted) viewModel.syncFromDevice()
+    }
+
     CallsScreen(
         state = state,
         navigator = navigator,
@@ -65,6 +76,17 @@ fun CallsRoute(
         onReportSpam = viewModel::reportSpam,
         onSaveContact = viewModel::saveAsContact,
         onDismissMessage = viewModel::clearMessage,
+        permissionCard = if (logPermission.granted) {
+            null
+        } else {
+            {
+                PermissionPrompt(
+                    permissions = listOf(MovaPermission.CALL_LOG, MovaPermission.READ_PHONE_STATE),
+                    title = "Ver el historial de tu teléfono",
+                    onRequest = { logPermission.request() }
+                )
+            }
+        },
         modifier = modifier
     )
 }
@@ -80,9 +102,11 @@ fun CallsScreen(
     onReportSpam: (CallRecord) -> Unit,
     onSaveContact: (CallRecord) -> Unit,
     onDismissMessage: () -> Unit,
+    permissionCard: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     AuroraBackground(modifier = modifier) {
+        permissionCard?.invoke()
         Column(modifier = Modifier.fillMaxSize()) {
             MovaScreenHeader(
                 title = "Historial de llamadas",

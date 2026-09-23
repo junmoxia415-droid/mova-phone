@@ -84,7 +84,14 @@ fun MovaNavHost(
 ) {
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
 
-        composable(MovaRoutes.SPLASH) { SplashScreen(onReady = { navigator.replaceWith(MovaRoutes.HOME) }) }
+        composable(MovaRoutes.PERMISSIONS) {
+            PermissionsScreen(
+                navigator = navigator,
+                firstRun = false,
+                onFinish = { navigator.back() },
+                onOpenSystemSettings = {}
+            )
+        }
 
         composable(MovaRoutes.HOME) { HomeRoute(navigator, viewModel(factory = container.homeFactory)) }
 
@@ -163,7 +170,12 @@ fun MovaNavHost(
             arguments = listOf(navArgument("address") { type = NavType.StringType })
         ) { entry ->
             val address = java.net.URLDecoder.decode(entry.arguments?.getString("address").orEmpty(), "UTF-8")
-            ConversationRoute(address = address, viewModel = viewModel(factory = container.messagesFactory))
+            ConversationRoute(
+                address = address,
+                viewModel = viewModel(factory = container.messagesFactory),
+                navigator = navigator,
+                contactName = container.contactNameCache.resolve(address)
+            )
         }
 
         composable(MovaRoutes.TEMPLATES) { TemplatesRoute(viewModel(factory = container.messagesFactory)) }

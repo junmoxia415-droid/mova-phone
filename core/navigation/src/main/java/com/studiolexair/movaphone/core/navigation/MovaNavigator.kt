@@ -9,13 +9,16 @@ import androidx.navigation.NavController
  */
 class MovaNavigator(private val navController: NavController) {
 
+    /** Abre los ajustes de la aplicación en el sistema (para permisos denegados "no volver a preguntar"). */
+    var onOpenSystemSettings: (() -> Unit)? = null
+
     /** Controlador de navegación para el anfitrión del grafo (módulo app). */
     val controller: NavController get() = navController
 
-    /** Reemplaza la pantalla actual: usado por el splash para no dejar historial. */
+    /** Reemplaza la pantalla actual sin destruir el grafo de navegación. */
     fun replaceWith(route: String) {
         navController.navigate(route) {
-            popUpTo(navController.graph.id) { inclusive = true }
+            popUpTo(MovaRoutes.SPLASH) { inclusive = true }
             launchSingleTop = true
         }
     }
@@ -61,6 +64,7 @@ class MovaNavigator(private val navController: NavController) {
     fun toCredits() = navController.navigate(MovaRoutes.CREDITS)
     fun toPrivacy() = navController.navigate(MovaRoutes.PRIVACY)
     fun toAssistant() = navController.navigate(MovaRoutes.ASSISTANT)
+    fun toPermissions() = navController.navigate(MovaRoutes.PERMISSIONS)
     fun toMore() = navController.navigate(MovaRoutes.MORE) { launchSingleTop = true }
 
     fun toTopLevel(destination: TopLevelDestination) = navController.navigate(destination.route) {

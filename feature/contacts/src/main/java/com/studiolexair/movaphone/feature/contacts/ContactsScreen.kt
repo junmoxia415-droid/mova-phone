@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,9 @@ import com.studiolexair.movaphone.core.designsystem.component.MovaSearchField
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.MovaPermission
+import com.studiolexair.movaphone.core.permissions.PermissionPrompt
+import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
 import com.studiolexair.movaphone.domain.contacts.model.Contact
 
 /** Lista de contactos con pestañas (Todos · Favoritos · Privados) y acciones rápidas. */
@@ -43,6 +47,14 @@ fun ContactsRoute(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // La agenda del sistema se sincroniza sola en cuanto hay permiso:
+    // los contactos del teléfono aparecen sin que el usuario tenga que buscarlos.
+    val contactsPermission = rememberPermissionHandle(listOf(MovaPermission.READ_CONTACTS))
+    LaunchedEffect(contactsPermission.granted) {
+        if (contactsPermission.granted) viewModel.importDeviceContacts()
+    }
+
     ContactsScreen(
         state = state,
         navigator = navigator,
@@ -51,6 +63,17 @@ fun ContactsRoute(
         onToggleFavorite = viewModel::toggleFavorite,
         onNewContact = { navigator.toContactEdit(null) },
         onImport = viewModel::importDeviceContacts,
+        permissionCard = if (contactsPermission.granted) {
+            null
+        } else {
+            {
+                PermissionPrompt(
+                    permissions = listOf(MovaPermission.READ_CONTACTS),
+                    title = "Ver los contactos de tu teléfono",
+                    onRequest = { contactsPermission.request() }
+                )
+            }
+        },
         modifier = modifier
     )
 }
@@ -64,6 +87,7 @@ fun ContactsScreen(
     onToggleFavorite: (Contact) -> Unit,
     onNewContact: () -> Unit,
     onImport: () -> Unit,
+    permissionCard: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     AuroraBackground(modifier = modifier) {
@@ -80,6 +104,10 @@ fun ContactsScreen(
                     )
                 }
             )
+
+            permissionCard?.let { card ->
+                Column(modifier = Modifier.padding(horizontal = MovaDimens.spaceLg)) { card() }
+            }
 
             Column(modifier = Modifier.padding(horizontal = MovaDimens.spaceLg)) {
                 MovaSearchField(

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -44,6 +45,7 @@ import com.studiolexair.movaphone.core.designsystem.component.PillTone
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.rememberPermissionChecker
 
 data class SettingsSection(val id: String, val title: String, val icon: ImageVector)
 
@@ -54,6 +56,7 @@ private val sections = listOf(
     SettingsSection("messages", "Mensajes", Icons.Filled.Message),
     SettingsSection("sos", "SOS", Icons.Filled.Emergency),
     SettingsSection("security", "Seguridad", Icons.Filled.Lock),
+    SettingsSection("permisos", "Permisos de la aplicación", Icons.Filled.VerifiedUser),
     SettingsSection("privacy", "Privacidad", Icons.Filled.Storage),
     SettingsSection("automation", "Automatizaciones", Icons.Filled.Bolt),
     SettingsSection("location", "Ubicación", Icons.Filled.LocationOn),
@@ -182,6 +185,19 @@ fun SettingsSectionRoute(
                             onCheckedChange = viewModel::setSpamDetection
                         )
                     }
+                    item {
+                        // Requisito 35: si la API del sistema no lo permite, se dice con claridad.
+                        val recording = rememberPermissionChecker()
+                        MovaInfoBanner(
+                            message = if (recording.isCallRecordingAvailable()) {
+                                "Grabación de llamadas: el sistema de este dispositivo permite usar la API oficial. " +
+                                    "MOVA Phone no graba nada sin que tú lo inicies y te lo indique legalmente."
+                            } else {
+                                recording.callRecordingUnavailableMessage()
+                            },
+                            tone = if (recording.isCallRecordingAvailable()) PillTone.Success else PillTone.Neutral
+                        )
+                    }
                 }
                 "contacts" -> {
                     item { MovaSwitchRow(title = "Mostrar contactos del dispositivo", checked = settings.showDeviceContacts, onCheckedChange = { }) }
@@ -218,6 +234,16 @@ fun SettingsSectionRoute(
                 }
                 "security" -> {
                     item { MovaSecondaryButton(text = "Abrir centro de seguridad", onClick = { navigator.toSecurity() }) }
+                }
+                "permisos" -> {
+                    item {
+                        MovaInfoBanner(
+                            message = "MOVA Phone pide cada permiso en contexto. Aquí puedes revisarlos y conceder los que falten.",
+                            tone = PillTone.Brand,
+                            icon = Icons.Filled.VerifiedUser
+                        )
+                    }
+                    item { MovaSecondaryButton(text = "Revisar permisos", onClick = { navigator.toPermissions() }) }
                 }
                 "privacy" -> {
                     item {

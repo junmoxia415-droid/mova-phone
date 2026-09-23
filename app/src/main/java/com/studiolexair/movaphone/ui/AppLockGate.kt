@@ -101,6 +101,7 @@ fun AppLockGate(container: MovaContainer, settings: MovaSettings) {
                                 "Desbloqueo correcto con PIN"
                             )
                             container.appLockController.unlock()
+                            container.onAppUnlocked()
                         } else {
                             container.securityEventLogger.log(
                                 com.studiolexair.movaphone.core.security.event.SecurityEventType.PIN_FAILED,
@@ -128,7 +129,10 @@ fun AppLockGate(container: MovaContainer, settings: MovaSettings) {
                                 activity = activity,
                                 title = "Desbloquear MOVA Phone",
                                 subtitle = "Confirma tu identidad para continuar",
-                                onSuccess = { container.appLockController.unlock() },
+                                onSuccess = {
+                                    container.appLockController.unlock()
+                                    container.onAppUnlocked()
+                                },
                                 onError = { message = it }
                             )
                         }

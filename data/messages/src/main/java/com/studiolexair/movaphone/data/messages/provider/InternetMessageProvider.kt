@@ -12,7 +12,12 @@ class InternetMessageProvider : MessageProvider {
 
     override suspend fun isAvailable(): Boolean = false
 
-    override suspend fun send(destination: String, body: String): MessageSendResult =
+    override suspend fun send(
+        destination: String,
+        body: String,
+        sentIntent: android.app.PendingIntent?,
+        deliveryIntent: android.app.PendingIntent?
+    ): MessageSendResult =
         MessageSendResult(
             success = false,
             providerId = id,

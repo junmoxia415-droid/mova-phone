@@ -6,7 +6,19 @@ Aplicación de teléfono **nativa para Android** (Kotlin + Jetpack Compose) desa
 No es una web dentro de una WebView ni un mockup: cada función usa la API real de Android
 (Telephony, SmsManager, CallLog, ContactsContract, LocationManager, Keystore, BiometricPrompt…).
 
-> **Desarrollado por Studio Lexair** · Versión 1.0.0 · © 2026
+> **Desarrollado por Studio Lexair** · Versión 1.0.1 · © 2026
+
+📋 **Auditoría completa del proyecto**: [`docs/AUDITORIA.md`](docs/AUDITORIA.md) — qué está implementado
+de verdad, qué es parcial y qué no está, con el motivo real de cada limitación.
+
+### Novedades de la 1.0.1 (correcciones del APK instalado)
+- Los permisos **se piden**: asistente en el primer arranque y petición en contexto en cada función.
+- Las llamadas **salen desde MOVA** (TelecomManager), nunca abriendo el marcador del sistema.
+- Los contactos del teléfono **aparecen solos** al conceder el permiso.
+- Enviar un mensaje recién guardado el contacto **funciona**, con confirmación de envío y *Reintentar*.
+- Mensajes con **palomitas de estado** (enviando/enviado/entregado/leído/fallo) y ficha al tocar el mensaje.
+- Sección **"Te han escrito"**: todas las personas que han escrito al usuario, con sus no leídos.
+- El **botón Inicio** ya no se queda bloqueado después de añadir un contacto.
 
 ---
 

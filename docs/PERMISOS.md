@@ -3,6 +3,22 @@
 MOVA Phone pide lo mínimo, en el momento en que se necesita y explicando para qué.
 Si el usuario deniega, la app **sigue funcionando** con la función afectada marcada como no disponible.
 
+## Cómo se piden (flujo real desde la 1.0.1)
+
+1. **Primer arranque**: tras la pantalla de marca, MOVA Phone muestra el asistente de permisos
+   (`ui/PermissionsScreen.kt`) con los permisos **uno por uno**, para qué sirve cada uno y el
+   estado actual. Hay un botón para concederlos todos y otro para volver a pedir los que falten.
+2. **En contexto**: cada función pide su permiso cuando el usuario la usa y, al concederlo,
+   **retoma la acción** que estaba haciendo:
+   - Marcador → `CALL_PHONE`; la llamada se reintenta automáticamente.
+   - Historial → `READ_CALL_LOG` + `READ_PHONE_STATE`; el historial se sincroniza al instante.
+   - Contactos → `READ_CONTACTS`; la agenda del teléfono se importa sola.
+   - Mensajes → `READ_SMS` + `RECEIVE_SMS` + `SEND_SMS`; el mensaje escrito se envía al concederlo.
+   - Ubicación → `ACCESS_FINE_LOCATION` + `ACCESS_COARSE_LOCATION`.
+   - SOS → `SEND_SMS` + ubicación + `CALL_PHONE`.
+3. **Revisión posterior**: Más → **Permisos**, o Ajustes → *Permisos de la aplicación*.
+4. Si el usuario marcó "no volver a preguntar", la pantalla ofrece **Abrir ajustes del sistema**.
+
 | Permiso | Cuándo se pide | Para qué se usa | Si se deniega |
 |---|---|---|---|
 | `CALL_PHONE` | Al pulsar llamar | Marcar desde marcador, contactos, historial, conducción y SOS | Se ofrece abrir el marcador del sistema |

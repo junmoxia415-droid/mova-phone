@@ -23,5 +23,14 @@
                 <action android:name="com.studiolexair.movaphone.action.SMS_SENT" />
             </intent-filter>
         </receiver>
+
+        <!-- Confirmación de entrega: segunda palomita de la conversación. -->
+        <receiver
+            android:name=".MovaSmsDeliveredReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.studiolexair.movaphone.action.SMS_DELIVERED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

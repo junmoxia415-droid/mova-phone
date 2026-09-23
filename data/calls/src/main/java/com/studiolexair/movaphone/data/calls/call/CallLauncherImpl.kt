@@ -14,10 +14,13 @@ import com.studiolexair.movaphone.core.logging.MovaLog
 import com.studiolexair.movaphone.domain.calls.repository.CallLauncher
 
 /**
- * Marcación con APIs oficiales:
- *  - Con permiso CALL_PHONE se usa TelecomManager (llamada directa).
- *  - Sin permiso se abre el marcador del sistema con el número preparado (ACTION_DIAL),
- *    de modo que la función sigue siendo útil sin invadir la privacidad del usuario.
+ * Marcación con APIs oficiales.
+ *
+ *  - Con permiso CALL_PHONE se marca directamente con TelecomManager (la llamada se
+ *    inicia desde MOVA Phone, sin abrir el marcador del sistema).
+ *  - Sin permiso, [placeCall] devuelve `false` para que la interfaz **pida el permiso**
+ *    en contexto; si el usuario lo deniega, se le ofrece abrir el marcador del sistema
+ *    de forma explícita ([openDialer]) en lugar de hacerlo por su cuenta.
  */
 class CallLauncherImpl(private val context: Context) : CallLauncher {
 
@@ -25,11 +28,17 @@ class CallLauncherImpl(private val context: Context) : CallLauncher {
 
     override fun canPlaceCalls(): Boolean = capabilities.hasTelephony
 
+    override fun hasCallPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) ==
+            PackageManager.PERMISSION_GRANTED
+
     override suspend fun placeCall(number: String): Boolean {
         val uri = Uri.parse("tel:" + Uri.encode(number))
         if (!hasCallPermission()) {
-            MovaLog.i(TAG, "Sin CALL_PHONE: se abre el marcador del sistema")
-            return openDialer(number)
+            // No se abre el marcador del sistema sin que el usuario lo pida:
+            // la capa de UI solicita CALL_PHONE y reintenta la llamada.
+            MovaLog.i(TAG, "Llamada no iniciada: falta el permiso CALL_PHONE")
+            return false
         }
         return try {
             val telecom = context.getSystemService(TelecomManager::class.java)
@@ -60,10 +69,6 @@ class CallLauncherImpl(private val context: Context) : CallLauncher {
         MovaLog.e(TAG, "No hay marcador disponible", t)
         false
     }
-
-    private fun hasCallPermission(): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) ==
-            PackageManager.PERMISSION_GRANTED
 
     private companion object {
         const val TAG = "CallLauncher"

@@ -17,6 +17,7 @@ import com.studiolexair.movaphone.core.security.settings.MovaSettingsStore
 import com.studiolexair.movaphone.data.automation.engine.AutomationActionExecutor
 import com.studiolexair.movaphone.data.automation.engine.AutomationConditionEvaluator
 import com.studiolexair.movaphone.data.automation.engine.AutomationEngineImpl
+import com.studiolexair.movaphone.data.automation.receiver.AutomationEventBridge
 import com.studiolexair.movaphone.data.automation.repository.AutomationRepositoryImpl
 import com.studiolexair.movaphone.data.automation.worker.AutomationWorker
 import com.studiolexair.movaphone.data.automation.worker.AutomationWorkerDependencies
@@ -236,6 +237,10 @@ class MovaContainer(
         AutomationWorkerDependencies.engine = automationEngine
         AutomationWorkerDependencies.batteryReader = { batteryReader.batteryPercent() }
 
+        // Disparadores de sistema y de la propia app (conducción, SOS, desbloqueo):
+        // el motor de automatizaciones recibe el 100% de los eventos que ofrece el editor.
+        AutomationEventBridge.engine = automationEngine
+
         MovaLog.i(TAG, "Componentes del sistema conectados con el contenedor de dependencias")
     }
 
@@ -245,6 +250,13 @@ class MovaContainer(
         com.studiolexair.movaphone.core.security.settings.MovaSettings.DEFAULT
 
     /** Arranca los trabajos periódicos y los canales de notificación. */
+    /** El desbloqueo de la app es un disparador de automatizaciones más (requisito 18). */
+    fun onAppUnlocked() {
+        AutomationEventBridge.fire(
+            com.studiolexair.movaphone.domain.automation.model.TriggerType.APP_UNLOCKED
+        )
+    }
+
     fun startBackgroundWork() {
         MovaNotificationChannels.create(context)
         scope.launch {

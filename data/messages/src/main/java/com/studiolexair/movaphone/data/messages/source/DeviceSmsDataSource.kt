@@ -9,7 +9,21 @@ import com.studiolexair.movaphone.core.logging.MovaLog
 /** Lectura de la bandeja de entrada del sistema (Telephony.Sms, API oficial). */
 class DeviceSmsDataSource(private val context: Context) {
 
+    /** ¿Tenemos permiso para leer los SMS del sistema? */
+    fun hasPermission(): Boolean =
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.READ_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
     fun readInbox(limit: Int = 300): List<MessageEntity> {
+        if (!hasPermission()) {
+            com.studiolexair.movaphone.core.logging.MovaLog.w(
+                "DeviceSms",
+                "Sin permiso READ_SMS: no se leen los SMS del sistema"
+            )
+            return emptyList()
+        }
         val results = mutableListOf<MessageEntity>()
         val projection = arrayOf(
             Telephony.Sms._ID,

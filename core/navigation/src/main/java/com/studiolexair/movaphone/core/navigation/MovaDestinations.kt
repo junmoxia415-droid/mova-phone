@@ -42,6 +42,7 @@ object MovaRoutes {
     const val CREDITS = "credits"
     const val PRIVACY = "privacy"
     const val ASSISTANT = "assistant"
+    const val PERMISSIONS = "permissions"
     const val MORE = "more"
 
     fun contactDetail(id: Long) = "contacts/$id"

@@ -51,6 +51,13 @@ fun DrivingRoute(
     modifier: Modifier = Modifier
 ) {
     val favorites by contactsRepository.observeFavorites().collectAsState(initial = emptyList())
+
+    // El modo conducción es un disparador real de automatizaciones: entrar aquí lo lanza.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.studiolexair.movaphone.data.automation.receiver.AutomationEventBridge.fire(
+            com.studiolexair.movaphone.domain.automation.model.TriggerType.DRIVING_DETECTED
+        )
+    }
     val context = LocalContext.current
 
     AuroraBackground(modifier = modifier) {

@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,9 @@ import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaPalette
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.MovaPermission
+import com.studiolexair.movaphone.core.permissions.PermissionPrompt
+import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
 
 /**
  * Pantalla de ubicación sin dependencia de Google Maps: se muestra la posición real
@@ -61,6 +65,14 @@ fun LocationRoute(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Ubicación: el permiso se pide aquí, con su explicación, y al concederlo se busca la posición.
+    val locationPermission = rememberPermissionHandle(
+        listOf(MovaPermission.FINE_LOCATION, MovaPermission.COARSE_LOCATION)
+    )
+    LaunchedEffect(locationPermission.granted) {
+        if (locationPermission.granted) viewModel.requestFreshLocation()
+    }
     val history by viewModel.history.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -141,8 +153,21 @@ fun LocationRoute(
                     text = if (state.loading) "Obteniendo ubicación..." else "Obtener ubicación",
                     icon = Icons.Filled.MyLocation,
                     enabled = !state.loading,
-                    onClick = viewModel::requestFreshLocation
+                    onClick = {
+                        if (locationPermission.granted) viewModel.requestFreshLocation()
+                        else locationPermission.request()
+                    }
                 )
+            }
+
+            item {
+                if (!locationPermission.granted) {
+                    PermissionPrompt(
+                        permissions = listOf(MovaPermission.FINE_LOCATION, MovaPermission.COARSE_LOCATION),
+                        title = "Permiso de ubicación",
+                        onRequest = { locationPermission.request() }
+                    )
+                }
             }
 
             item {

@@ -61,6 +61,56 @@ fun PermissionRequestCard(
     }
 }
 
+/**
+ * Aviso con varios permisos a la vez: se usa cuando una pantalla necesita más de uno
+ * (por ejemplo Mensajes: enviar, recibir y leer SMS).
+ */
+@Composable
+fun PermissionPrompt(
+    permissions: List<MovaPermission>,
+    title: String,
+    onRequest: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (permissions.isEmpty()) return
+    androidx.compose.material3.Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MovaTheme.extra.border)
+    ) {
+        Column(
+            modifier = Modifier.padding(MovaDimens.spaceMd),
+            verticalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(MovaDimens.iconSm)
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            permissions.forEach { permission ->
+                Text(
+                    text = "• ${permission.title}: ${permission.rationale}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MovaTheme.extra.textSecondary
+                )
+            }
+            MovaSecondaryButton(text = "Conceder permisos", onClick = onRequest)
+        }
+    }
+}
+
 /** Aviso de que una función concreta no está disponible (requisito 35). */
 @Composable
 fun UnavailableFeatureDialog(

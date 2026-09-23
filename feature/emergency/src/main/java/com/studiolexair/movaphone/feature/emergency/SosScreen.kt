@@ -29,6 +29,9 @@ import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaPalette
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.MovaPermission
+import com.studiolexair.movaphone.core.permissions.PermissionPrompt
+import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
 
 /**
  * Pantalla SOS: mantenimiento de 3 segundos con anillo de progreso y cuenta regresiva.
@@ -44,6 +47,16 @@ fun SosRoute(
     val contacts by viewModel.contacts.collectAsStateWithLifecycle()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val message by viewModel.statusMessage.collectAsStateWithLifecycle()
+
+    // El protocolo SOS necesita ubicación, SMS y llamadas: se piden aquí, en contexto.
+    val sosPermissions = rememberPermissionHandle(
+        listOf(
+            MovaPermission.SEND_SMS,
+            MovaPermission.FINE_LOCATION,
+            MovaPermission.COARSE_LOCATION,
+            MovaPermission.CALL_PHONE
+        )
+    )
 
     val activeSession = session
     if (activeSession != null && activeSession.active) {
@@ -86,11 +99,24 @@ fun SosRoute(
                 )
             }
 
+            if (!sosPermissions.granted) {
+                PermissionPrompt(
+                    permissions = sosPermissions.missing,
+                    title = "Permisos del protocolo de emergencia",
+                    onRequest = { sosPermissions.request() }
+                )
+            }
+
             message?.let { MovaInfoBanner(message = it, tone = PillTone.Success) }
 
             HoldToConfirmButton(
                 label = "SOS",
-                onConfirmed = viewModel::triggerSos,
+                onConfirmed = {
+                    com.studiolexair.movaphone.data.automation.receiver.AutomationEventBridge.fire(
+                        com.studiolexair.movaphone.domain.automation.model.TriggerType.SOS_ACTIVATED
+                    )
+                    viewModel.triggerSos()
+                },
                 holdMillis = holdMillis,
                 dangerColors = true
             )

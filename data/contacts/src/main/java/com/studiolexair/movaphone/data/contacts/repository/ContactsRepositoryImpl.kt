@@ -62,17 +62,37 @@ class ContactsRepositoryImpl(
 
     /** Importa la agenda del sistema sin duplicar números ya existentes. */
     override suspend fun importFromDevice(): Int {
+        if (!deviceContacts.hasPermission()) {
+            MovaLog.w(TAG, "Sincronización pendiente: falta permiso de contactos")
+            return 0
+        }
         val deviceContactsList = deviceContacts.readAll()
-        var imported = 0
+        var changes = 0
         deviceContactsList.forEach { entity ->
             val existing = contactDao.findByNormalizedNumber(entity.normalizedNumber)
             if (existing == null) {
                 contactDao.insert(entity)
-                imported++
+                changes++
+            } else {
+                // Se refresca el nombre/foto del sistema sin perder los ajustes propios
+                // (favorito manual, notas, grupo o modo privado).
+                if (existing.displayName != entity.displayName || existing.photoUri != entity.photoUri) {
+                    contactDao.update(
+                        existing.copy(
+                            displayName = entity.displayName,
+                            phoneNumber = entity.phoneNumber,
+                            photoUri = entity.photoUri ?: existing.photoUri,
+                            deviceContactId = entity.deviceContactId ?: existing.deviceContactId,
+                            isFavorite = existing.isFavorite || entity.isFavorite,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
+                    changes++
+                }
             }
         }
-        MovaLog.i(TAG, "Contactos importados: $imported de ${deviceContactsList.size}")
-        return imported
+        MovaLog.i(TAG, "Agenda del sistema sincronizada: $changes cambios de ${deviceContactsList.size} contactos")
+        return changes
     }
 
     override suspend fun suggestions(query: String, limit: Int): List<Contact> {

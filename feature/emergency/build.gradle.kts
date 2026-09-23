@@ -4,5 +4,7 @@ dependencies {
     implementation(project(":domain:emergency"))
     implementation(project(":domain:calls"))
     implementation(project(":core:database"))
+    implementation(project(":domain:automation"))
+    implementation(project(":data:automation"))
     testImplementation(libs.truth)
 }

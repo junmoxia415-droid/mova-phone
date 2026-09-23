@@ -3,6 +3,46 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 [Versionado semántico](https://semver.org/lang/es/).
 
+## [1.0.1] — 2026-09-23
+
+### Corregido (auditoría del APK instalado)
+- **Permisos**: ahora se piden de verdad. Asistente de permisos en el primer arranque
+  (uno por uno, con su explicación) y petición **en contexto** en marcador, historial,
+  contactos, mensajes, ubicación y SOS. Antes ninguna pantalla los solicitaba.
+- **Llamadas desde MOVA**: `placeCall()` usa `TelecomManager` y **no** abre el marcador del
+  sistema. Si falta `CALL_PHONE` se pide el permiso y la llamada se reintenta sola.
+- **Contactos del teléfono**: se sincronizan automáticamente al conceder el permiso (antes
+  sólo con el botón "Importar") y al reimportar se actualizan nombre, foto y favorito.
+- **Enviar mensaje justo después de añadir un contacto**: el envío pide el permiso de SMS,
+  confirma el envío real y ofrece *Reintentar* si el sistema lo rechaza.
+- **Botón Inicio**: `replaceWith()` ya no destruye el grafo de navegación
+  (`popUpTo(findStartDestination())`), así que la barra inferior sigue funcionando después
+  de guardar un contacto.
+- **Historial de llamadas**: pide `READ_CALL_LOG` y `READ_PHONE_STATE` en la propia pantalla
+  y se sincroniza en cuanto se conceden.
+
+### Añadido
+- **Palomitas de estado** en cada burbuja del chat (enviando · enviado ✓ · entregado ✓✓ ·
+  leído · fallo) en lugar del texto "enviado" bajo el mensaje.
+- **Ficha de mensaje al tocar**: estado real con su explicación, hora, transporte, copiar,
+  llamar, reintentar el envío y borrar.
+- **Sección "Te han escrito"** en Mensajes: todas las personas que han escrito al usuario,
+  con último mensaje, fecha, número de mensajes y cuántos quedan sin leer.
+- **Confirmación de entrega real** de los SMS (`PendingIntent` de envío y de entrega por
+  mensaje, con receptor propio) además del de envío.
+- **Sección de permisos** en Ajustes y en el hub "Más", más "Acerca de" y "Créditos".
+- **Disparadores de automatización** que faltaban y ya se lanzan de verdad: cargador
+  conectado, Wi-Fi conectado, Bluetooth conectado, modo conducción, SOS activado y
+  desbloqueo de la app.
+- **Disponibilidad de grabación de llamadas** informada en Ajustes → Llamadas
+  (requisito 35: si el sistema no lo permite, se dice con claridad).
+- Auditoría completa del proyecto en `docs/AUDITORIA.md` (qué está implementado de verdad
+  y qué no, fase por fase).
+- Pruebas unitarias de la agrupación "Te han escrito".
+
+### Cambiado
+- Versión `1.0.1` (`versionCode 2`): se puede actualizar por encima de la 1.0.0 sin perder datos.
+
 ## [1.0.0] — 2026
 
 ### Añadido
