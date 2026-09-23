@@ -18,6 +18,7 @@ import com.studiolexair.movaphone.data.automation.engine.AutomationActionExecuto
 import com.studiolexair.movaphone.data.automation.engine.AutomationConditionEvaluator
 import com.studiolexair.movaphone.data.automation.engine.AutomationEngineImpl
 import com.studiolexair.movaphone.data.automation.receiver.AutomationEventBridge
+import com.studiolexair.movaphone.data.automation.receiver.SystemEventsRegistrar
 import com.studiolexair.movaphone.data.automation.repository.AutomationRepositoryImpl
 import com.studiolexair.movaphone.data.automation.worker.AutomationWorker
 import com.studiolexair.movaphone.data.automation.worker.AutomationWorkerDependencies
@@ -240,6 +241,8 @@ class MovaContainer(
         // Disparadores de sistema y de la propia app (conducción, SOS, desbloqueo):
         // el motor de automatizaciones recibe el 100% de los eventos que ofrece el editor.
         AutomationEventBridge.engine = automationEngine
+        // Avisos de batería: broadcast *sticky*, se registra con la app viva (requisito de Android).
+        SystemEventsRegistrar(context).register()
 
         MovaLog.i(TAG, "Componentes del sistema conectados con el contenedor de dependencias")
     }

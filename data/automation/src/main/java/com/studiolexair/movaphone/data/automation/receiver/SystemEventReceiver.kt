@@ -78,6 +78,42 @@ class SystemEventReceiver : BroadcastReceiver() {
 }
 
 /**
+ * Registra en tiempo de ejecución los avisos del sistema que Android **no** entrega a los
+ * receptores declarados en el manifiesto. `ACTION_BATTERY_CHANGED` es un broadcast *sticky*:
+ * la documentación de Android lo dice expresamente, así que se registra aquí con la app viva.
+ */
+class SystemEventsRegistrar(private val context: Context) {
+
+    private var receiver: BroadcastReceiver? = null
+
+    fun register() {
+        if (receiver != null) return
+        val batteryReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                SystemEventReceiver().onReceive(context, intent)
+            }
+        }
+        val filter = android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        try {
+            androidx.core.content.ContextCompat.registerReceiver(
+                context,
+                batteryReceiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            receiver = batteryReceiver
+            MovaLog.i(TAG, "Avisos de batería registrados en tiempo de ejecución")
+        } catch (t: Throwable) {
+            MovaLog.e(TAG, "No fue posible registrar los avisos de batería", t)
+        }
+    }
+
+    private companion object {
+        const val TAG = "SystemEventsRegistrar"
+    }
+}
+
+/**
  * Puente entre los receptores del sistema y el motor de automatizaciones.
  * Lo rellena el contenedor de la aplicación al arrancar (patrón usado también en
  * llamadas y SMS, donde Android instancia los componentes por sí mismo).

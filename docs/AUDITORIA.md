@@ -77,7 +77,12 @@ Fecha: 2026-09-23 · Versión auditada: **1.0.1 (versionCode 2)** · Versión an
 ### FASE 5 — Automatizaciones ✅
 - Motor real: disparador → condiciones → acciones, con historial de ejecuciones en Room.
 - 12 disparadores, 7 condiciones y 11 acciones disponibles en el editor.
-- Disparadores que **se lanzan de verdad** hoy: llamada entrante, SMS recibido, batería baja, hora del día (WorkManager cada 30 min), cargador conectado, Wi-Fi conectado, Bluetooth conectado, modo conducción, SOS activado y desbloqueo de la app.
+- Disparadores que **se lanzan de verdad** hoy: llamada entrante, SMS recibido, batería baja (aviso del sistema + revisión cada 30 min con WorkManager), hora del día, cargador conectado, Wi-Fi conectado, Bluetooth conectado, modo conducción, SOS activado y desbloqueo de la app.
+
+🟡 **Matiz de Bluetooth**: en Android 12 o superior el sistema exige el permiso `BLUETOOTH_CONNECT` para leer qué
+dispositivo se ha conectado; si el fabricante no lo concede, ese disparador concreto no recibe el evento
+(el resto sigue funcionando). El aviso de batería se registra en tiempo de ejecución porque
+`ACTION_BATTERY_CHANGED` es un broadcast *sticky* que Android no entrega a los receptores del manifiesto.
 - 🟡 **Limitación**: `LOCATION_ENTER` / `LOCATION_EXIT` se pueden configurar y guardar, pero **no** se disparan solos: requieren geovallas del sistema (`GeofencingClient`), que exige Google Play Services, dependencia que el proyecto prohíbe. Alternativa documentada: usar la ubicación puntual y el historial.
 
 ### FASE 6 — Mensajes ✅ (rediseñada en 1.0.1)
