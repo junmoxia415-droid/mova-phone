@@ -1,0 +1,120 @@
+name: Release MOVA Phone
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a publicar (por ejemplo v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publicar release con APK, AAB, mapping y checksums
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0 platform-tools'
+
+      - name: Caché de Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Dar permisos al wrapper
+        run: chmod +x ./gradlew
+
+      - name: Preparar firma de release
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > app/mova-release.jks
+            echo "MOVA_KEYSTORE_PATH=app/mova-release.jks" >> "$GITHUB_ENV"
+            echo "MOVA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "MOVA_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "MOVA_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+            echo "FIRMA=keystore de release" >> "$GITHUB_ENV"
+          else
+            echo "FIRMA=clave de desarrollo (sin secretos configurados)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Pruebas unitarias
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Compilar APK y AAB de release
+        run: ./gradlew :app:assembleRelease :app:bundleRelease --stacktrace
+
+      - name: Preparar archivos de la release
+        run: |
+          set -e
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          mkdir -p dist
+          cp app/build/outputs/apk/release/*.apk dist/mova-phone-${VERSION}.apk
+          cp app/build/outputs/bundle/release/*.aab dist/mova-phone-${VERSION}.aab
+          if [ -f app/build/outputs/mapping/release/mapping.txt ]; then
+            cp app/build/outputs/mapping/release/mapping.txt dist/mova-phone-${VERSION}-mapping.txt
+          fi
+          cd dist
+          sha256sum * > checksums.txt
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          ls -lh
+
+      - name: Limpiar keystore temporal
+        if: always()
+        run: rm -f app/mova-release.jks
+
+      - name: Publicar artefactos del workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: mova-phone-release-${{ env.VERSION }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Crear la release en GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NOTES=$(cat <<'EOF'
+          ## MOVA Phone · release automática
+
+          **Desarrollado por Studio Lexair.**
+
+          ### Archivos
+          - `mova-phone-<versión>.apk` — aplicación instalable (firma de release).
+          - `mova-phone-<versión>.aab` — paquete para publicar en Google Play.
+          - `mova-phone-<versión>-mapping.txt` — símbolos de R8 para interpretar trazas.
+          - `checksums.txt` — SHA-256 de cada archivo.
+
+          ### Instalación
+          1. Descarga el APK en tu teléfono Android 8.0 o superior.
+          2. Permite la instalación desde esta fuente y ábrelo.
+          3. Concede los permisos que necesites: la app funciona sin los opcionales.
+
+          ### Notas
+          - Los datos se guardan sólo en el dispositivo.
+          - El código fuente corresponde a este mismo tag.
+          EOF
+          )
+          gh release create "$VERSION" dist/* \
+            --title "MOVA Phone $VERSION" \
+            --notes "$NOTES" \
+            --latest

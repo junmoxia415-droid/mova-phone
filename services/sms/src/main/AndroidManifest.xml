@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+
+    <application>
+        <receiver
+            android:name=".MovaSmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="900">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Confirmación real del envío de SMS (uso interno de la app). -->
+        <receiver
+            android:name=".MovaSmsSentReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.studiolexair.movaphone.action.SMS_SENT" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
