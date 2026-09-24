@@ -249,7 +249,12 @@ class WearBridgeClient(private val context: Context) {
         }
     }
 
-    /** Escribe un fragmento, con el método propio de cada versión de Android. */
+    /**
+     * Escribe un fragmento, con el método propio de cada versión de Android.
+     * Los permisos de Bluetooth se piden antes de conectar y la llamada va dentro de
+     * runCatching, así que aquí no puede escaparse un SecurityException.
+     */
+    @SuppressLint("MissingPermission")
     @Suppress("DEPRECATION")
     private fun writeFrame(
         gatt: BluetoothGatt,

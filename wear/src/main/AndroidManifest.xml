@@ -9,12 +9,19 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+    <!-- Android 8-11 exigen ubicación para poder buscar por Bluetooth; van juntas. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
 
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/wear_app_name"
         android:theme="@style/Theme.MovaWear">
+
+        <!-- MOVA Reloj se abre y funciona por sí sola (no necesita el teléfono emparejado). -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
 
         <activity
             android:name=".WearMainActivity"

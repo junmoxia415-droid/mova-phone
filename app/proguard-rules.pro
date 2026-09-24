@@ -22,3 +22,14 @@
 -dontwarn kotlinx.coroutines.**
 -dontwarn org.jetbrains.annotations.**
 -keepclassmembers class kotlin.Metadata { public <methods>; }
+
+# Modelo de IA local (MediaPipe GenAI): las anotaciones de AutoValue y protobuf-lite sólo
+# hacen falta al compilar; R8 no debe quejarse por ellas. Las clases de MediaPipe sí se
+# conservan porque se llaman desde código nativo (JNI).
+-dontwarn com.google.auto.value.**
+-dontwarn com.google.mediapipe.framework.image.**
+-dontwarn com.google.mediapipe.framework.**
+-dontwarn com.google.protobuf.**
+-dontwarn javax.annotation.**
+-keep class com.google.mediapipe.** { *; }
+-keep class com.google.protobuf.** { *; }
