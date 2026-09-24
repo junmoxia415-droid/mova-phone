@@ -26,7 +26,19 @@ class MovaNavigator(private val navController: NavController) {
 
     fun back(): Boolean = navController.navigateUp()
 
-    fun toHome() = navController.navigate(MovaRoutes.HOME) { launchSingleTop = true }
+    /** Navega a una ruta de la aplicación (la usan los accesos directos personalizados). */
+    fun navigateRoute(route: String) {
+        navController.navigate(route) { launchSingleTop = true }
+    }
+
+    /**
+     * Vuelve a Inicio dejando la pila limpia.
+     *
+     * Antes esto *empujaba* otra pantalla de Inicio encima, así que al pulsar "atrás" el
+     * usuario volvía a la pantalla anterior (el fallo de navegación del 1.1). Ahora se
+     * vacía hasta el inicio del grafo: "atrás" siempre sale de la aplicación desde Inicio.
+     */
+    fun toHome() = toTopLevel(TopLevelDestination.HOME)
     fun toDialer(prefill: String? = null) {
         val route = "dialer?number=${java.net.URLEncoder.encode(prefill.orEmpty(), "UTF-8")}"
         navController.navigate(route) { launchSingleTop = true }
@@ -64,13 +76,29 @@ class MovaNavigator(private val navController: NavController) {
     fun toAbout() = navController.navigate(MovaRoutes.ABOUT)
     fun toCredits() = navController.navigate(MovaRoutes.CREDITS)
     fun toPrivacy() = navController.navigate(MovaRoutes.PRIVACY)
-    fun toAssistant() = navController.navigate(MovaRoutes.ASSISTANT)
+    /** Abre el chat del asistente. `launchSingleTop` evita apilar un chat por cada toque. */
+    fun toAssistant() = navController.navigate(MovaRoutes.ASSISTANT) { launchSingleTop = true }
     fun toPermissions() = navController.navigate(MovaRoutes.PERMISSIONS)
     fun toMore() = navController.navigate(MovaRoutes.MORE) { launchSingleTop = true }
 
-    fun toTopLevel(destination: TopLevelDestination) = navController.navigate(destination.route) {
-        popUpTo(MovaRoutes.HOME) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+    /**
+     * Cambio de pestaña de la barra inferior.
+     *
+     * Se vacía la pila hasta el **primer destino del grafo** (Inicio) y se restaura el estado
+     * de cada pestaña: así el botón "atrás" del teléfono nunca devuelve a una pantalla ya
+     * cerrada ni se queda atrapado en un submenú, que era el fallo de navegación del 1.1.
+     */
+    fun toTopLevel(destination: TopLevelDestination) {
+        val start = navController.graph.startDestinationId
+        navController.navigate(destination.route) {
+            popUpTo(start) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
+
+    /** Abre el chat del asistente desde cualquier parte de la aplicación. */
+    fun toAssistantSettings() = navController.navigate(MovaRoutes.ASSISTANT_SETTINGS)
+    fun toAssistantHelp() = navController.navigate(MovaRoutes.ASSISTANT_HELP)
+    fun toProfile() = navController.navigate(MovaRoutes.PROFILE)
 }

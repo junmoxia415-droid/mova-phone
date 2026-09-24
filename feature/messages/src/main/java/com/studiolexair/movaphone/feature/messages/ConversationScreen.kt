@@ -1,5 +1,8 @@
 package com.studiolexair.movaphone.feature.messages
 
+import android.content.Intent
+import android.net.Uri
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,13 +26,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -44,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,6 +59,7 @@ import com.studiolexair.movaphone.core.database.entity.MessageEntity
 import com.studiolexair.movaphone.core.designsystem.component.AuroraBackground
 import com.studiolexair.movaphone.core.designsystem.component.MovaAvatar
 import com.studiolexair.movaphone.core.designsystem.component.MovaInfoBanner
+import com.studiolexair.movaphone.core.designsystem.component.MovaListRow
 import com.studiolexair.movaphone.core.designsystem.component.MovaPrimaryButton
 import com.studiolexair.movaphone.core.designsystem.component.MovaScreenHeader
 import com.studiolexair.movaphone.core.designsystem.component.MovaSecondaryButton
@@ -69,6 +77,7 @@ import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
  * - al **tocar** un mensaje se abre una ficha con el estado real y su explicación;
  * - si falta el permiso de SMS se pide aquí y, en cuanto se concede, el mensaje escrito se envía solo.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationRoute(
     address: String,
@@ -76,6 +85,8 @@ fun ConversationRoute(
     navigator: MovaNavigator?,
     contactName: String? = null,
     prefill: String = "",
+    /** Ajustes → Mensajes: se pueden apagar las respuestas rápidas. */
+    quickRepliesEnabled: Boolean = true,
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -87,6 +98,9 @@ fun ConversationRoute(
     var pendingSend by remember(address) { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf<MessageEntity?>(null) }
     var toDelete by remember { mutableStateOf<MessageEntity?>(null) }
+    // Opción B (decidida por el usuario): RCS/MMS del teléfono, sin servidor propio.
+    var showOtherApps by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val listState = rememberLazyListState()
 
     val smsPermission = rememberPermissionHandle(
@@ -188,6 +202,40 @@ fun ConversationRoute(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                if (quickRepliesEnabled) {
+                    // Respuestas de un toque: se apagan desde Ajustes → Mensajes.
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(MovaDimens.spaceXs),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = MovaDimens.spaceXs)
+                    ) {
+                        items(QUICK_REPLIES) { quick ->
+                            Surface(
+                                shape = MaterialTheme.shapes.large,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.clickable {
+                                    if (smsPermission.granted) {
+                                        viewModel.send(address, quick, contactName)
+                                    } else {
+                                        pendingSend = quick
+                                        smsPermission.request()
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = quick,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(
+                                        horizontal = MovaDimens.spaceMd,
+                                        vertical = MovaDimens.spaceXs
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = draft,
                     onValueChange = { draft = it },
@@ -229,6 +277,76 @@ fun ConversationRoute(
                             .clickable { viewModel.shareLocation(address) }
                     )
                 }
+                MovaSecondaryButton(
+                    text = "Enviar por otra app (RCS o WhatsApp)",
+                    icon = Icons.Filled.Share,
+                    onClick = { showOtherApps = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = MovaDimens.spaceSm)
+                )
+            }
+        }
+    }
+
+    if (showOtherApps) {
+        ModalBottomSheet(
+            onDismissRequest = { showOtherApps = false },
+            sheetState = rememberModalBottomSheetState()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(MovaDimens.spaceLg),
+                verticalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)
+            ) {
+                Text(
+                    text = "Enviar este chat con otra aplicación",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                MovaInfoBanner(
+                    message = "MOVA no tiene servidor propio: escribimos con el SMS/MMS de tu " +
+                        "operadora. Si tu compañía ofrece RCS (mensajes mejorados), se envía desde " +
+                        "la app de mensajería del teléfono; y si prefiere WhatsApp u otra app, se " +
+                        "abre con el texto ya escrito.",
+                    tone = PillTone.Brand
+                )
+                MovaListRow(
+                    title = "Mensajería del teléfono (RCS/MMS)",
+                    subtitle = "Usa el RCS del operador si está disponible",
+                    leading = {
+                        Icon(
+                            Icons.Filled.Message,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${Uri.encode(address)}"))
+                            .putExtra("sms_body", draft)
+                        runCatching { context.startActivity(intent) }
+                        showOtherApps = false
+                    }
+                )
+                MovaListRow(
+                    title = "Otra aplicación (WhatsApp, Telegram…)",
+                    subtitle = "Se abre con el texto escrito",
+                    leading = {
+                        Icon(
+                            Icons.Filled.Share,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, draft)
+                        }
+                        runCatching { context.startActivity(Intent.createChooser(intent, "Enviar con")) }
+                        showOtherApps = false
+                    }
+                )
             }
         }
     }
@@ -467,3 +585,6 @@ fun MessageDetailSheet(
         }
     }
 }
+
+/** Respuestas rápidas de un toque (se pueden apagar en Ajustes → Mensajes). */
+private val QUICK_REPLIES = listOf("Ya voy", "Te llamo luego", "¿Estás bien?", "Gracias")

@@ -43,6 +43,9 @@ object MovaRoutes {
     const val CREDITS = "credits"
     const val PRIVACY = "privacy"
     const val ASSISTANT = "assistant"
+    const val ASSISTANT_SETTINGS = "assistant/settings"
+    const val ASSISTANT_HELP = "assistant/ayuda"
+    const val PROFILE = "perfil"
     const val PERMISSIONS = "permissions"
     const val MORE = "more"
 
@@ -58,5 +61,6 @@ enum class TopLevelDestination(val route: String, val label: String) {
     HOME(MovaRoutes.HOME, "Inicio"),
     CONTACTS(MovaRoutes.CONTACTS, "Contactos"),
     CALLS(MovaRoutes.CALLS, "Historial"),
+    MESSAGES(MovaRoutes.MESSAGES, "Mensajes"),
     MORE(MovaRoutes.MORE, "Más")
 }

@@ -21,7 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,12 +47,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.studiolexair.movaphone.core.designsystem.component.AuroraBackground
 import com.studiolexair.movaphone.core.designsystem.component.MovaAvatar
+import com.studiolexair.movaphone.core.designsystem.component.MovaCard
 import com.studiolexair.movaphone.core.designsystem.component.MovaInfoBanner
+import com.studiolexair.movaphone.core.designsystem.component.MovaPrimaryButton
+import com.studiolexair.movaphone.core.designsystem.component.MovaSecondaryButton
 import com.studiolexair.movaphone.core.designsystem.component.MovaListRow
 import com.studiolexair.movaphone.core.designsystem.component.PillTone
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaPalette
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
+import com.studiolexair.movaphone.core.common.util.SystemRoles
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
 import com.studiolexair.movaphone.core.permissions.MovaPermission
 import com.studiolexair.movaphone.core.permissions.PermissionPrompt
@@ -97,10 +103,50 @@ fun DialerRoute(
         }
     }
 
+    // Rol del sistema: si MOVA no es todavia tu app de telefono, hay que decirlo aqui
+    // (por eso "seguia saliendo la pantalla del sistema" al llamar) y ofrecer arreglarlo.
+    var roleRefresh by remember { mutableStateOf(0) }
+    val holdsDialerRole = remember(roleRefresh) { SystemRoles.holdsRole(context, SystemRoles.DIALER) }
+    val roleLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { roleRefresh++ }
+
     DialerScreen(
         state = state,
         navigator = navigator,
         hapticEnabled = hapticEnabled,
+        dialerRoleCard = if (holdsDialerRole) {
+            null
+        } else {
+            {
+                MovaCard {
+                    Text(
+                        text = "MOVA todavia no es tu app de telefono",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Mientras no se lo permitas, Android ensena SU pantalla durante la " +
+                            "llamada en lugar de la de MOVA. Se arregla en un toque y solo hay que " +
+                            "hacerlo una vez.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MovaTheme.extra.textSecondary,
+                        modifier = Modifier.padding(top = MovaDimens.spaceXs)
+                    )
+                    MovaPrimaryButton(
+                        text = "Hacer que MOVA sea la app de telefono",
+                        icon = Icons.Filled.PhoneAndroid,
+                        modifier = Modifier.padding(top = MovaDimens.spaceSm),
+                        onClick = {
+                            val intent = SystemRoles.requestIntent(context, SystemRoles.DIALER)
+                            if (intent != null) roleLauncher.launch(intent) else roleRefresh++
+                        }
+                    )
+                }
+            }
+        },
+        onRedial = { number -> startCall(number) },
+        onMessage = { number -> navigator.toConversation(number) },
         onKeyPressed = viewModel::onKeyPressed,
         onCall = { startCall(state.input) },
         onCallNumber = { number -> startCall(number) },
@@ -137,13 +183,17 @@ fun DialerScreen(
     onReportSpam: () -> Unit,
     onSaveContact: (String) -> Unit,
     onDismissMessage: () -> Unit,
+    onRedial: (String) -> Unit = {},
+    onMessage: (String) -> Unit = {},
     permissionCard: (@Composable () -> Unit)? = null,
+    dialerRoleCard: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val extra = MovaTheme.extra
     val haptics = LocalHapticFeedback.current
     AuroraBackground(modifier = modifier) {
         permissionCard?.invoke()
+        dialerRoleCard?.invoke()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -159,6 +209,40 @@ fun DialerScreen(
                     .fillMaxWidth()
                     .padding(vertical = MovaDimens.spaceXl)
             )
+
+            // Lo que pidio el usuario: al llamar, queda a la vista el numero al que acaba de llamar.
+            state.lastDialed?.let { number ->
+                MovaCard {
+                    Text(
+                        text = "Ultima llamada",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MovaTheme.extra.textMuted
+                    )
+                    Text(
+                        text = state.lastDialedName?.let { "$it - $number" } ?: number,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = MovaDimens.spaceXs)
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm),
+                        modifier = Modifier.padding(top = MovaDimens.spaceSm)
+                    ) {
+                        MovaPrimaryButton(
+                            text = "Volver a llamar",
+                            icon = Icons.Filled.Call,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onRedial(number) }
+                        )
+                        MovaSecondaryButton(
+                            text = "Mensaje",
+                            icon = Icons.Filled.Message,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onMessage(number) }
+                        )
+                    }
+                }
+            }
 
             state.spamVerdict?.takeIf { it.isSpam }?.let { verdict ->
                 MovaInfoBanner(

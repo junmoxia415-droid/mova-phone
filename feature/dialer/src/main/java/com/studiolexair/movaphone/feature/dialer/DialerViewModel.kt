@@ -22,7 +22,11 @@ data class DialerUiState(
     val spamVerdict: SpamVerdict? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null,
-    val canCall: Boolean = false
+    val canCall: Boolean = false,
+    /** Ultimo numero al que se ha llamado desde MOVA (para poder repetir de un toque). */
+    val lastDialed: String? = null,
+    /** Nombre del contacto de esa ultima llamada, si se conoce. */
+    val lastDialedName: String? = null
 )
 
 /**
@@ -32,6 +36,7 @@ data class DialerUiState(
  */
 class DialerViewModel(
     private val contactsRepository: ContactsRepository,
+    private val callsRepository: com.studiolexair.movaphone.domain.calls.repository.CallsRepository,
     private val placeCall: PlaceCallUseCase,
     private val saveContact: SaveContactUseCase,
     private val classifyNumber: suspend (String) -> SpamVerdict,
@@ -92,12 +97,39 @@ class DialerViewModel(
     }
 
     fun call(number: String = state.value.input) {
+        val clean = number.trim()
+        if (clean.isBlank()) return
         viewModelScope.launch {
-            val result = placeCall(number)
+            val result = placeCall(clean)
             if (result is com.studiolexair.movaphone.core.common.result.MovaResult.Failure) {
                 state.value = state.value.copy(errorMessage = result.error.userMessage)
             } else {
-                state.value = state.value.copy(input = "", formatted = "", canCall = false, suggestions = emptyList())
+                // El usuario pidio expresamente que, tras llamar, quede a la vista el numero
+                // al que acaba de llamar, con un boton para volver a llamar.
+                val name = runCatching {
+                    contactsRepository.contactsByNumber(PhoneNumbers.normalize(clean))?.displayName
+                }.getOrNull()
+                state.value = state.value.copy(
+                    input = "",
+                    formatted = "",
+                    canCall = false,
+                    suggestions = emptyList(),
+                    lastDialed = clean,
+                    lastDialedName = name
+                )
+                // El número recién marcado entra YA en el historial de MOVA, sin esperar a que
+                // el sistema vuelque su registro: es lo que pidió el usuario al probar el 1.1.
+                runCatching {
+                    callsRepository.registerCall(
+                        com.studiolexair.movaphone.domain.calls.model.CallRecord(
+                            number = clean,
+                            normalizedNumber = PhoneNumbers.normalize(clean),
+                            contactName = name,
+                            type = com.studiolexair.movaphone.domain.calls.model.CallType.OUTGOING,
+                            startedAt = System.currentTimeMillis()
+                        )
+                    )
+                }
             }
         }
     }
@@ -150,12 +182,22 @@ class DialerViewModel(
     companion object {
         fun factory(
             contactsRepository: ContactsRepository,
+            callsRepository: com.studiolexair.movaphone.domain.calls.repository.CallsRepository,
             placeCall: PlaceCallUseCase,
             saveContact: SaveContactUseCase,
             classifyNumber: suspend (String) -> SpamVerdict,
             blockNumber: suspend (String) -> Unit
         ) = viewModelFactory {
-            initializer { DialerViewModel(contactsRepository, placeCall, saveContact, classifyNumber, blockNumber) }
+            initializer {
+                DialerViewModel(
+                    contactsRepository,
+                    callsRepository,
+                    placeCall,
+                    saveContact,
+                    classifyNumber,
+                    blockNumber
+                )
+            }
         }
     }
 }

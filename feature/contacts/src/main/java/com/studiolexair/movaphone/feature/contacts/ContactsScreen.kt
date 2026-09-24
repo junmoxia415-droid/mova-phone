@@ -43,6 +43,8 @@ import com.studiolexair.movaphone.domain.contacts.model.Contact
 @Composable
 fun ContactsRoute(
     navigator: MovaNavigator,
+    /** Ajustes → Contactos: si está apagado, MOVA no lee la agenda del teléfono. */
+    deviceContactsEnabled: Boolean = true,
     viewModel: ContactsViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -52,7 +54,7 @@ fun ContactsRoute(
     // los contactos del teléfono aparecen sin que el usuario tenga que buscarlos.
     val contactsPermission = rememberPermissionHandle(listOf(MovaPermission.READ_CONTACTS))
     LaunchedEffect(contactsPermission.granted) {
-        if (contactsPermission.granted) viewModel.importDeviceContacts()
+        if (contactsPermission.granted && deviceContactsEnabled) viewModel.importDeviceContacts()
     }
 
     ContactsScreen(

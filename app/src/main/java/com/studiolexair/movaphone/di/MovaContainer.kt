@@ -126,6 +126,9 @@ class MovaContainer(
     /** Modelo de lenguaje en el teléfono + preferencias del asistente (sin nube). */
     val localModelManager = LocalModelManager(context)
     val assistantPreferences = AssistantPreferences(context)
+
+    /** La voz con la que MOVA contesta (se comparte entre chat y modo conducción). */
+    val movaVoiceOutput = com.studiolexair.movaphone.feature.assistant.voice.MovaVoiceOutput(context)
     val callLauncher = CallLauncherImpl(context)
 
     // ---------- Servicios compartidos ----------
@@ -164,7 +167,8 @@ class MovaContainer(
             securityEventLogger.log(SecurityEventType.SOS_TRIGGERED, description)
         },
         renderSms = RenderEmergencySmsUseCase(),
-        senderName = senderName
+        senderName = senderName,
+        shareLocationEnabled = { settingsSnapshot.shareLocationOnSos }
     )
 
     // ---------- Automatizaciones ----------

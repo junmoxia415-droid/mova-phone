@@ -1,104 +1,141 @@
 package com.studiolexair.movaphone.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Emergency
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.studiolexair.movaphone.core.designsystem.component.AuroraBackground
-import com.studiolexair.movaphone.core.designsystem.component.MovaQuickAction
+import com.studiolexair.movaphone.core.designsystem.component.MovaInfoBanner
+import com.studiolexair.movaphone.core.designsystem.component.MovaListRow
 import com.studiolexair.movaphone.core.designsystem.component.MovaScreenHeader
+import com.studiolexair.movaphone.core.designsystem.component.MovaSectionHeader
+import com.studiolexair.movaphone.core.designsystem.component.PillTone
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
-import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
 
 /**
- * Centro "Más" del mockup: todas las funciones de MOVA Phone a un toque,
- * además de la barra inferior con Inicio, Contactos e Historial.
+ * Centro «Más», rehecho según lo que pidió el usuario: el 1.1 tenía 14 cuadros sueltos en
+ * una cuadrícula y costaba encontrar las cosas. Ahora son **cuatro grupos con nombre** y
+ * filas normales, de modo que se lee de un vistazo y todo está a un toque.
+ *
+ * Lo que ya vive en la barra inferior (Contactos, Historial, Mensajes) no se repite aquí.
  */
-private data class HubAction(
+private data class HubEntry(
     val title: String,
+    val subtitle: String,
     val icon: ImageVector,
     val onClick: () -> Unit
 )
 
 @Composable
 fun MoreHubRoute(navigator: MovaNavigator, modifier: Modifier = Modifier) {
-    val actions = listOf(
-        HubAction("Mensajes", Icons.Filled.Message) { navigator.toMessages() },
-        HubAction("Ubicación", Icons.Filled.LocationOn) { navigator.toLocation() },
-        HubAction("Automatizaciones", Icons.Filled.Bolt) { navigator.toAutomation() },
-        HubAction("Seguridad", Icons.Filled.Lock) { navigator.toSecurity() },
-        HubAction("Asistente MOVA", Icons.Filled.AutoAwesome) { navigator.toAssistant() },
-        HubAction("Modo conducción", Icons.Filled.DirectionsCar) { navigator.toDriving() },
-        HubAction("SOS", Icons.Filled.Emergency) { navigator.toSos() },
-        HubAction("Favoritos", Icons.Filled.Star) { navigator.toFavorites() },
-        HubAction("Historial", Icons.Filled.Call) { navigator.toCalls() },
-        HubAction("Contactos", Icons.Filled.Contacts) { navigator.toContacts() },
-        HubAction("Permisos", Icons.Filled.VerifiedUser) { navigator.toPermissions() },
-        HubAction("Ajustes", Icons.Filled.Settings) { navigator.toSettings() },
-        HubAction("Acerca de", Icons.Filled.Info) { navigator.toAbout() },
-        HubAction("Créditos", Icons.Filled.Star) { navigator.toCredits() }
-    )
-    val accents = listOf(
-        MovaTheme.extra.tileGradientBlue, MovaTheme.extra.tileGradientGreen,
-        MovaTheme.extra.tileGradientViolet, MovaTheme.extra.tileGradientAmber
+    // Cada grupo responde a "¿para qué entro aquí?"
+    val groups: List<Pair<String, List<HubEntry>>> = listOf(
+        "Llamar y escribir" to listOf(
+            HubEntry("Marcar y llamar", "Teclado, contactos y llamada", Icons.Filled.Phone) {
+                navigator.toDialer()
+            },
+            HubEntry("Favoritos", "Tus personas de siempre", Icons.Filled.Star) {
+                navigator.toFavorites()
+            },
+            HubEntry("Mensajes", "Conversaciones y SMS", Icons.Filled.Message) {
+                navigator.toMessages()
+            }
+        ),
+        "Seguridad y emergencia" to listOf(
+            HubEntry("Centro de seguridad", "Bloqueo, spam y privacidad", Icons.Filled.Lock) {
+                navigator.toSecurity()
+            },
+            HubEntry("SOS", "Ayuda inmediata a tus contactos", Icons.Filled.Emergency) {
+                navigator.toSos()
+            },
+            HubEntry("Ubicación", "Dónde estás y compartir con quien quieras", Icons.Filled.LocationOn) {
+                navigator.toLocation()
+            },
+            HubEntry("Permisos", "Qué puede hacer MOVA y por qué", Icons.Filled.VerifiedUser) {
+                navigator.toPermissions()
+            }
+        ),
+        "Asistente MOVA" to listOf(
+            HubEntry("Hablar con MOVA", "Pídele cosas con tu voz o por escrito", Icons.Filled.AutoAwesome) {
+                navigator.toAssistant()
+            },
+            HubEntry("Modo conducción", "Manos libres en el coche", Icons.Filled.DirectionsCar) {
+                navigator.toDriving()
+            },
+            HubEntry("Automatizaciones", "Que MOVA haga cosas por ti", Icons.Filled.Bolt) {
+                navigator.toAutomation()
+            }
+        ),
+        "Aplicación" to listOf(
+            HubEntry("Ajustes", "Todo lo configurable, ordenado por temas", Icons.Filled.Settings) {
+                navigator.toSettings()
+            },
+            HubEntry("Acerca de MOVA Phone", "Versión, licencias y privacidad", Icons.Filled.Info) {
+                navigator.toAbout()
+            }
+        )
     )
 
     AuroraBackground(modifier = modifier) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(MovaDimens.spaceLg),
-            verticalArrangement = Arrangement.spacedBy(MovaDimens.spaceLg)
+            verticalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)
         ) {
             item {
-                MovaScreenHeader(title = "Más", subtitle = "Todas las funciones de MOVA Phone")
+                MovaScreenHeader(
+                    title = "Más",
+                    subtitle = "Todo lo que MOVA puede hacer por ti"
+                )
             }
-            items((actions.size + 1) / 2) { rowIndex ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(MovaDimens.spaceMd)
-                ) {
-                    val first = actions[rowIndex * 2]
-                    MovaQuickAction(
-                        title = first.title,
-                        icon = first.icon,
-                        accent = accents[rowIndex % accents.size].first(),
-                        onClick = first.onClick,
-                        modifier = Modifier.weight(1f)
+            item {
+                MovaInfoBanner(
+                    message = "Aquí sólo lo que no está en la barra de abajo. La barra te lleva " +
+                        "siempre a Inicio, Contactos, Historial y Mensajes.",
+                    tone = PillTone.Brand
+                )
+            }
+            groups.forEach { (title, entries) ->
+                item {
+                    MovaSectionHeader(
+                        text = title,
+                        modifier = Modifier.padding(top = MovaDimens.spaceSm)
                     )
-                    val secondIndex = rowIndex * 2 + 1
-                    if (secondIndex < actions.size) {
-                        val second = actions[secondIndex]
-                        MovaQuickAction(
-                            title = second.title,
-                            icon = second.icon,
-                            accent = accents[(rowIndex + 2) % accents.size].first(),
-                            onClick = second.onClick,
-                            modifier = Modifier.weight(1f)
+                }
+                entries.forEach { entry ->
+                    item {
+                        MovaListRow(
+                            title = entry.title,
+                            subtitle = entry.subtitle,
+                            leading = {
+                                Icon(
+                                    imageVector = entry.icon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            onClick = entry.onClick
                         )
-                    } else {
-                        Column(modifier = Modifier.weight(1f).padding(MovaDimens.spaceSm)) {}
                     }
                 }
             }

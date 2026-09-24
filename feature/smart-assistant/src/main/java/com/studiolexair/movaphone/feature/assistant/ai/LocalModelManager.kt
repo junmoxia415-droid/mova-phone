@@ -21,6 +21,7 @@ import java.net.URL
  *
  *  - **Ligero (159 MB)**: SmolLM-135M — entiende órdenes cortas y responde al instante.
  *  - **Recomendado (521 MB)**: Qwen2.5-0.5B — entiende mejor frases completas en español.
+ *  - **Avanzado (1,1 GB)**: TinyLlama-1.1B — el que mejor razona, para teléfonos con memoria de sobra.
  *
  * Si no hay modelo descargado, MOVA sigue funcionando igual con su intérprete de reglas
  * local: el modelo es una mejora, nunca un requisito.
@@ -71,6 +72,15 @@ class LocalModelManager(private val context: Context) {
             url = "https://huggingface.co/litert-community/Qwen2.5-0.5B-Instruct/resolve/main/" +
                 "Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
             sizeBytes = 546_308_096L
+        ),
+        LocalModel(
+            id = "tinyllama-1.1b",
+            name = "Modelo avanzado",
+            description = "1,1 GB · el que mejor razona frases largas; pide un teléfono con memoria de sobra",
+            fileName = "tinyllama-1.1b.task",
+            url = "https://huggingface.co/litert-community/TinyLlama-1.1B-Chat-v1.0/resolve/main/" +
+                "TinyLlama-1.1B-Chat-v1.0_multi-prefill-seq_q8_ekv1280.task",
+            sizeBytes = 1_095_000_000L
         )
     )
 

@@ -43,6 +43,8 @@ import com.studiolexair.movaphone.di.settingsFactory
 import com.studiolexair.movaphone.feature.about.AboutRoute
 import com.studiolexair.movaphone.feature.about.CreditsRoute
 import com.studiolexair.movaphone.feature.about.PrivacyRoute
+import com.studiolexair.movaphone.feature.assistant.AssistantHelpRoute
+import com.studiolexair.movaphone.feature.assistant.AssistantSettingsRoute
 import com.studiolexair.movaphone.feature.assistant.SmartAssistantRoute
 import com.studiolexair.movaphone.feature.automation.AutomationEditorRoute
 import com.studiolexair.movaphone.feature.automation.AutomationHistoryRoute
@@ -112,7 +114,11 @@ fun MovaNavHost(
 
         composable(MovaRoutes.CALLS) { CallsRoute(navigator, viewModel(factory = container.callsFactory)) }
 
-        composable(MovaRoutes.CONTACTS) { ContactsRoute(navigator, viewModel(factory = container.contactsFactory)) }
+        composable(MovaRoutes.CONTACTS) { ContactsRoute(
+            navigator = navigator,
+            viewModel = viewModel(factory = container.contactsFactory),
+            deviceContactsEnabled = settings.showDeviceContacts
+        ) }
 
         composable(
             route = MovaRoutes.CONTACT_DETAIL,
@@ -178,7 +184,8 @@ fun MovaNavHost(
                 address = address,
                 viewModel = viewModel(factory = container.messagesFactory),
                 navigator = navigator,
-                contactName = container.contactNameCache.resolve(address)
+                contactName = container.contactNameCache.resolve(address),
+                quickRepliesEnabled = settings.quickRepliesEnabled
             )
         }
 
@@ -226,6 +233,21 @@ fun MovaNavHost(
 
         composable(MovaRoutes.ASSISTANT) {
             SmartAssistantRoute(navigator, viewModel(factory = container.assistantFactory))
+        }
+
+        composable(MovaRoutes.ASSISTANT_SETTINGS) {
+            AssistantSettingsRoute(navigator, viewModel(factory = container.assistantFactory))
+        }
+
+        composable(MovaRoutes.ASSISTANT_HELP) {
+            AssistantHelpRoute(navigator)
+        }
+
+        composable(MovaRoutes.PROFILE) {
+            ProfileRoute(
+                settingsStore = container.settingsStore,
+                navigator = navigator
+            )
         }
 
         composable(MovaRoutes.MORE) { MoreHubRoute(navigator) }

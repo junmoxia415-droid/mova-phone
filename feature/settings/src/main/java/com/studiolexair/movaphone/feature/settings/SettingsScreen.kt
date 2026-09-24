@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Call
@@ -45,12 +46,14 @@ import com.studiolexair.movaphone.core.designsystem.component.MovaCard
 import com.studiolexair.movaphone.core.designsystem.component.MovaInfoBanner
 import com.studiolexair.movaphone.core.designsystem.component.MovaListRow
 import com.studiolexair.movaphone.core.designsystem.component.MovaScreenHeader
+import com.studiolexair.movaphone.core.designsystem.component.MovaSectionHeader
 import com.studiolexair.movaphone.core.designsystem.component.MovaPrimaryButton
 import com.studiolexair.movaphone.core.designsystem.component.MovaSecondaryButton
 import com.studiolexair.movaphone.core.designsystem.component.MovaSwitchRow
 import com.studiolexair.movaphone.core.designsystem.component.PillTone
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
+import com.studiolexair.movaphone.core.navigation.HomeShortcuts
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
 import com.studiolexair.movaphone.core.permissions.MovaPermission
 import com.studiolexair.movaphone.core.permissions.rememberPermissionChecker
@@ -97,6 +100,21 @@ fun SettingsRoute(
             verticalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)
         ) {
             item { MovaScreenHeader(title = "Ajustes", subtitle = settings.userName) }
+            item {
+                // La marca abre el asistente desde aquí también.
+                MovaListRow(
+                    title = "MOVA",
+                    subtitle = "Hablar con el asistente",
+                    leading = {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Filled.AutoAwesome,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    onClick = { navigator.toAssistant() }
+                )
+            }
             items(sections) { section ->
                 MovaListRow(
                     title = section.title,
@@ -258,11 +276,23 @@ fun SettingsSectionRoute(
                     }
                 }
                 "contacts" -> {
-                    item { MovaSwitchRow(title = "Mostrar contactos del dispositivo", checked = settings.showDeviceContacts, onCheckedChange = { }) }
+                    item {
+                        MovaSwitchRow(
+                            title = "Mostrar contactos del dispositivo",
+                            checked = settings.showDeviceContacts,
+                            onCheckedChange = viewModel::setShowDeviceContacts
+                        )
+                    }
                     item { MovaListRow(title = "Grupos y privacidad", subtitle = "Gestiona contactos privados desde la sección Contactos") }
                 }
                 "messages" -> {
-                    item { MovaSwitchRow(title = "Respuestas rápidas", checked = settings.quickRepliesEnabled, onCheckedChange = { }) }
+                    item {
+                        MovaSwitchRow(
+                            title = "Respuestas rápidas",
+                            checked = settings.quickRepliesEnabled,
+                            onCheckedChange = viewModel::setQuickReplies
+                        )
+                    }
                     item { MovaSecondaryButton(text = "Editar plantillas de mensajes", onClick = { navigator.toTemplates() }) }
                 }
                 "sos" -> {
@@ -316,7 +346,7 @@ fun SettingsSectionRoute(
                             icon = Icons.Filled.Message
                         )
                     }
-                    item { MessageTransportCard() }
+                    item { MessageTransportCard(onOpenMessages = { navigator.toMessages() }) }
                     item { WearBridgeCard() }
                 }
                 "permisos" -> {
@@ -359,7 +389,13 @@ fun SettingsSectionRoute(
                 }
                 "location" -> {
                     item { MovaSwitchRow(title = "Alta precisión (GPS)", checked = settings.highAccuracyLocation, onCheckedChange = viewModel::setHighAccuracy) }
-                    item { MovaSwitchRow(title = "Compartir ubicación en emergencias", checked = settings.shareLocationOnSos, onCheckedChange = { }) }
+                    item {
+                        MovaSwitchRow(
+                            title = "Compartir ubicación en emergencias",
+                            checked = settings.shareLocationOnSos,
+                            onCheckedChange = viewModel::setShareLocationOnSos
+                        )
+                    }
                     item { MovaSecondaryButton(text = "Abrir ubicación", onClick = { navigator.toLocation() }) }
                 }
                 "notifications" -> {
@@ -382,6 +418,65 @@ fun SettingsSectionRoute(
                 "appearance" -> {
                     item { MovaSwitchRow(title = "Tema oscuro", checked = settings.darkTheme, onCheckedChange = viewModel::setDarkTheme) }
                     item { MovaSwitchRow(title = "Seguir el tema del sistema", checked = settings.followSystemTheme, onCheckedChange = viewModel::setFollowSystemTheme) }
+
+                    // Personalización máxima (punto 9 del encargo): el usuario decide qué atajos
+                    // aparecen en Inicio y en qué orden. Se guarda en los ajustes al instante.
+                    val chosen = HomeShortcuts.parse(settings.homeShortcuts)
+                    item {
+                        MovaSectionHeader(
+                            text = "Accesos directos de Inicio",
+                            trailing = {
+                                Text(
+                                    text = "${chosen.size}/${HomeShortcuts.MAX}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        )
+                    }
+                    item {
+                        MovaInfoBanner(
+                            message = "Toca para añadir o quitar. El orden en el que los elijas es el orden en el que aparecen en Inicio.",
+                            tone = PillTone.Brand
+                        )
+                    }
+                    items(HomeShortcuts.all) { shortcut ->
+                        val selected = chosen.contains(shortcut.id)
+                        MovaListRow(
+                            title = shortcut.label,
+                            subtitle = shortcut.description,
+                            accent = if (selected) MaterialTheme.colorScheme.primary else null,
+                            trailing = {
+                                Text(
+                                    text = if (selected) "Añadido" else "Añadir",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            },
+                            onClick = {
+                                val updated = when {
+                                    selected -> chosen - shortcut.id
+                                    chosen.size >= HomeShortcuts.MAX -> chosen
+                                    else -> chosen + shortcut.id
+                                }
+                                if (updated != chosen) {
+                                    viewModel.setHomeShortcuts(HomeShortcuts.serialize(updated))
+                                }
+                            }
+                        )
+                    }
+                    item {
+                        MovaSecondaryButton(
+                            text = "Restaurar accesos por defecto",
+                            onClick = {
+                                viewModel.setHomeShortcuts(HomeShortcuts.serialize(HomeShortcuts.defaultIds))
+                            }
+                        )
+                    }
                 }
                 "data" -> {
                     item {
@@ -409,20 +504,20 @@ fun SettingsSectionRoute(
 }
 
 /**
- * Aviso honesto: por dónde salen hoy los mensajes.
+ * Aviso honesto: por dónde salen los mensajes.
  *
- * MOVA ya es la app de mensajes del sistema y los envía por la red de telefonía (SMS).
- * La mensajería por Internet (tipo WhatsApp) necesita un servidor propio que todavía no
- * existe: decirlo aquí evita prometer lo que no hay. Por dentro, la app ya tiene el
- * contrato MessageProvider listo para añadir ese transporte el día que haya servidor.
+ * El usuario eligió la **opción B**: nada de servidores propios. MOVA es la app de mensajes
+ * del sistema y envía por la red de la operadora (SMS/MMS); cuando la compañía ofrece RCS
+ * (mensajes mejorados), el envío se hace desde la app de mensajería del teléfono. Así no hay
+ * ningún servidor de MOVA en medio y la privacidad se mantiene: lo que sale, sale por tu línea.
  */
 @Composable
-private fun MessageTransportCard() {
+private fun MessageTransportCard(onOpenMessages: () -> Unit = {}) {
     MovaCard {
         MovaListRow(
-            title = "Mensajes: SMS de tu operador",
-            subtitle = "Salen por la red de telefonía, igual que en la app de mensajes del sistema. " +
-                "Sin Internet de por medio y sin servidores de terceros.",
+            title = "SMS, MMS y RCS de tu operadora",
+            subtitle = "MOVA envía por tu línea, igual que la app de mensajes del sistema: " +
+                "sin Internet de por medio y sin servidores nuestros.",
             leading = {
                 androidx.compose.material3.Icon(
                     Icons.Filled.Message,
@@ -432,11 +527,19 @@ private fun MessageTransportCard() {
             }
         )
         MovaInfoBanner(
-            message = "La mensajería por Internet todavía no está activa: necesita un servidor propio " +
-                "que no se ha construido. MOVA ya tiene la pieza interna preparada para conectarla " +
-                "cuando exista, y el día que la haya lo dirá aquí.",
-            tone = PillTone.Neutral,
+            message = "Sin servidores de MOVA (así lo elegiste). Si tu compañía ofrece RCS " +
+                "(mensajes mejorados), en cada conversación tienes «Enviar por otra app» y el " +
+                "mensaje sale desde la app de mensajería del teléfono, con tu texto ya escrito. " +
+                "Para WhatsApp u otras apps también hay un botón: se abre con el mensaje listo.",
+            tone = PillTone.Brand,
             icon = Icons.Filled.Info
+        )
+        MovaSecondaryButton(
+            text = "Ver mis conversaciones",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = MovaDimens.spaceSm),
+            onClick = onOpenMessages
         )
     }
 }

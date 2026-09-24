@@ -45,7 +45,9 @@ class SosOrchestratorImpl(
     private val batteryReader: () -> Int?,
     private val onSecurityEvent: suspend (String) -> Unit,
     private val renderSms: RenderEmergencySmsUseCase = RenderEmergencySmsUseCase(),
-    private val senderName: String = "Usuario"
+    private val senderName: String = "Usuario",
+    /** El usuario decide en Ajustes si el SOS comparte su ubicación. Se pregunta en el momento. */
+    private val shareLocationEnabled: () -> Boolean = { true }
 ) : SosOrchestrator {
 
     private val state = MutableStateFlow<EmergencySession?>(null)
@@ -67,8 +69,18 @@ class SosOrchestratorImpl(
         onSecurityEvent("Emergencia activada · trigger=$trigger · contactos=${contacts.size}")
         MovaLog.w(TAG, "SOS iniciado con ${contacts.size} contactos de emergencia")
 
-        // 1) Ubicación
+        // 1) Ubicación (respetando el ajuste del usuario: si lo desactivó, se dice tal cual)
         current = updateStep(current, EmergencyStepKind.LOCATION, StepStatus.RUNNING, null)
+        if (!shareLocationEnabled()) {
+            current = updateStep(
+                current,
+                EmergencyStepKind.LOCATION,
+                StepStatus.SKIPPED,
+                "Has desactivado «Compartir ubicación en emergencias» en Ajustes"
+            )
+            emit(current)
+            return startRest(current, contacts, trigger, startedAt)
+        }
         val locationResult = locationRepository.currentLocation()
         current = when (locationResult) {
             is com.studiolexair.movaphone.data.location.model.LocationResult.Available -> {
@@ -91,6 +103,17 @@ class SosOrchestratorImpl(
         }
         emit(current)
 
+        return startRest(current, contacts, trigger, startedAt)
+    }
+
+    /** Sigue el protocolo normal (batería, SMS, llamada…) una vez resuelta la ubicación. */
+    private suspend fun startRest(
+        initial: EmergencySession,
+        contacts: List<com.studiolexair.movaphone.domain.emergency.model.EmergencyContact>,
+        trigger: String,
+        startedAt: Long
+    ): Long {
+        var current = initial
         // 2) Batería
         current = updateStep(current, EmergencyStepKind.BATTERY, StepStatus.RUNNING, null)
         val battery = batteryReader()

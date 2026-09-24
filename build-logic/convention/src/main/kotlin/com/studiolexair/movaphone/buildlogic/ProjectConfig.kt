@@ -7,7 +7,7 @@ internal object ProjectConfig {
     const val COMPILE_SDK = 35
     const val MIN_SDK = 26
     const val TARGET_SDK = 35
-    const val VERSION_CODE = 3
-    const val VERSION_NAME = "1.1"
+    const val VERSION_CODE = 4
+    const val VERSION_NAME = "1.2"
     const val JAVA_VERSION = 17
 }

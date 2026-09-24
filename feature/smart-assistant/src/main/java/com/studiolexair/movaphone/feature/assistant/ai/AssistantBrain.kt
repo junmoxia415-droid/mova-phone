@@ -100,13 +100,21 @@ class LlmAssistantBrain(
         } else {
             contactNames.joinToString(", ")
         }
+        // Las órdenes que se le explican al modelo salen de la MISMA biblioteca que ve el
+        // usuario en la ayuda: nunca pueden desincronizarse.
+        val capaz = com.studiolexair.movaphone.feature.assistant.CommandLibrary.promptFor()
         return """
             Eres el intérprete de órdenes de MOVA Phone (español de España).
-            Órdenes válidas: llamar a <nombre>, enviar mensaje a <nombre>, compartir ubicación,
-            abrir inicio, abrir marcador, abrir historial, abrir contactos, abrir mensajes,
-            abrir seguridad, abrir ubicación, abrir automatizaciones, abrir ajustes, abrir sos,
-            abrir conducción, emergencia.
-            Nombres conocidos: $contacts
+            El usuario dice algo con sus palabras, a veces mal dicho por el dictado, y tú lo
+            traduces a UNA de estas órdenes:
+            $capaz
+            - leer mensajes sin leer
+            - leer llamadas perdidas
+            - silenciar el teléfono
+            - activar modo conducción
+            - desactivar modo conducción
+            - abrir mi perfil
+            Nombres conocidos del usuario: $contacts
             Frase del usuario: "$input"
             Responde SOLO con la orden en una línea, sin explicaciones ni comillas.
         """.trimIndent()

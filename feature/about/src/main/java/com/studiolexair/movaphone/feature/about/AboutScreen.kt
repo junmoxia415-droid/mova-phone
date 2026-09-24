@@ -1,6 +1,8 @@
 package com.studiolexair.movaphone.feature.about
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,7 +59,10 @@ fun AboutRoute(
             item { MovaScreenHeader(title = "Acerca de", subtitle = "Información de la aplicación") }
 
             item {
-                MovaLogoLockup(showTagline = false)
+                // El logotipo es la marca y la marca es el asistente: al tocarlo se abre el chat.
+                Box(modifier = Modifier.clickable { navigator.toAssistant() }) {
+                    MovaLogoLockup(showTagline = false)
+                }
             }
 
             item {

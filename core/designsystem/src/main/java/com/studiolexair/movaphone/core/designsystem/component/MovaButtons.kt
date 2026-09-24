@@ -124,7 +124,19 @@ fun MovaSwitchRow(
                     )
                 }
             }
-            androidx.compose.material3.Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+            // El interruptor responde al instante: se pinta el cambio antes de que termine
+            // el guardado real y se sincroniza cuando llega el valor definitivo.
+            val localState = androidx.compose.runtime.remember(checked) {
+                androidx.compose.runtime.mutableStateOf(checked)
+            }
+            androidx.compose.material3.Switch(
+                checked = localState.value,
+                onCheckedChange = { value ->
+                    localState.value = value
+                    onCheckedChange(value)
+                },
+                enabled = enabled
+            )
         }
     }
 }

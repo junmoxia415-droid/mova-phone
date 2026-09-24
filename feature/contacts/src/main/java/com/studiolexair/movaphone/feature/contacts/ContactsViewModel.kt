@@ -50,9 +50,11 @@ class ContactsViewModel(
             ContactTab.FAVORITES -> contacts.filter { it.isFavorite }
             ContactTab.PRIVATE -> contacts.filter { it.isPrivate }
         }
-        val searched = if (query.isBlank()) filteredByTab else filteredByTab.filter {
-            it.displayName.contains(query, ignoreCase = true) || it.phoneNumber.contains(query)
-        }
+        // Buscador de MOVA: tolera emoji, tildes, mayúsculas, iniciales y números
+        // incompletos («nena» encuentra «Nena ❤️», «8747» encuentra +53 5267 8747).
+        val searched = if (query.isBlank()) filteredByTab
+        else com.studiolexair.movaphone.domain.contacts.matcher.ContactMatcher
+            .rank(query, filteredByTab, limit = filteredByTab.size)
         ContactsUiState(contacts = searched, tab = tab, query = query)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ContactsUiState())
 
@@ -122,6 +124,10 @@ class ContactsViewModel(
         }
     }
 
+    /**
+     * Importa la agenda del teléfono… sólo si el usuario lo permite en Ajustes → Contactos.
+     * El interruptor tenía buena pinta pero no hacía nada: ahora manda de verdad.
+     */
     fun importDeviceContacts() {
         viewModelScope.launch {
             try {

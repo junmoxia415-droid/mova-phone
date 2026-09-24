@@ -23,11 +23,13 @@ val MovaContainer.homeFactory get() = HomeViewModel.factory(
     callsRepository = callsRepository,
     contactsRepository = contactsRepository,
     emergencyRepository = emergencyRepository,
+    settingsStore = settingsStore,
     telephonyAvailable = capabilities.hasTelephony
 )
 
 val MovaContainer.dialerFactory get() = DialerViewModel.factory(
     contactsRepository = contactsRepository,
+    callsRepository = callsRepository,
     placeCall = placeCall,
     saveContact = saveContact,
     classifyNumber = classifyNumber,
@@ -92,10 +94,14 @@ val MovaContainer.settingsFactory get() = SettingsViewModel.factory(settingsStor
 val MovaContainer.assistantFactory get() = SmartAssistantViewModel.factory(
     context = applicationContext,
     contactsRepository = contactsRepository,
+    callsRepository = callsRepository,
     placeCall = placeCall,
     messageRepository = messageRepository,
     locationRepository = locationRepository,
     sosOrchestrator = sosOrchestrator,
+    drivingMode = drivingModeController,
+    settingsStore = settingsStore,
     modelManager = localModelManager,
-    preferences = assistantPreferences
+    preferences = assistantPreferences,
+    voiceOutput = movaVoiceOutput
 )

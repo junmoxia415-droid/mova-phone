@@ -24,6 +24,7 @@ class MovaSettingsStore(private val context: Context) {
         MovaSettings(
             userName = prefs[Keys.USER_NAME] ?: MovaSettings.DEFAULT.userName,
             onboardingCompleted = prefs[Keys.ONBOARDING] ?: false,
+            homeShortcuts = prefs[Keys.HOME_SHORTCUTS] ?: MovaSettings.DEFAULT.homeShortcuts,
             hapticKeypad = prefs[Keys.HAPTIC] ?: true,
             confirmBeforeCalling = prefs[Keys.CONFIRM_CALL] ?: false,
             blockUnknownNumbers = prefs[Keys.BLOCK_UNKNOWN] ?: false,
@@ -64,7 +65,12 @@ class MovaSettingsStore(private val context: Context) {
 
     suspend fun setUserName(value: String) = put(Keys.USER_NAME, value)
     suspend fun setOnboardingCompleted(value: Boolean) = put(Keys.ONBOARDING, value)
+
+    /** Los accesos directos de la pantalla de inicio: los elige el usuario. */
+    suspend fun setHomeShortcuts(value: String) = put(Keys.HOME_SHORTCUTS, value)
     suspend fun setHapticKeypad(value: Boolean) = put(Keys.HAPTIC, value)
+    suspend fun setShowDeviceContacts(value: Boolean) = put(Keys.SHOW_DEVICE_CONTACTS, value)
+    suspend fun setQuickReplies(value: Boolean) = put(Keys.QUICK_REPLIES, value)
     suspend fun setConfirmBeforeCalling(value: Boolean) = put(Keys.CONFIRM_CALL, value)
     suspend fun setBlockUnknownNumbers(value: Boolean) = put(Keys.BLOCK_UNKNOWN, value)
     suspend fun setSpamDetection(value: Boolean) = put(Keys.SPAM, value)
@@ -105,6 +111,7 @@ class MovaSettingsStore(private val context: Context) {
     private object Keys {
         val USER_NAME = stringPreferencesKey("user_name")
         val ONBOARDING = booleanPreferencesKey("onboarding_completed")
+        val HOME_SHORTCUTS = stringPreferencesKey("home_shortcuts")
         val HAPTIC = booleanPreferencesKey("haptic_keypad")
         val CONFIRM_CALL = booleanPreferencesKey("confirm_before_calling")
         val BLOCK_UNKNOWN = booleanPreferencesKey("block_unknown_numbers")

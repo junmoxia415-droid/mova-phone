@@ -60,6 +60,8 @@ data class MovaSettings(
     // Apariencia
     val darkTheme: Boolean = true,
     val followSystemTheme: Boolean = true,
+    /** Accesos directos de la pantalla de inicio, por identificador y en el orden elegido. */
+    val homeShortcuts: String = "seguridad,ubicacion,automatizar,mensajes",
     // Datos
     val lastBackupAt: Long = 0L
 ) {

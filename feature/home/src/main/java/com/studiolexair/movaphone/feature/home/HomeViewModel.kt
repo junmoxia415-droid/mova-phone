@@ -28,6 +28,8 @@ data class HomeUiState(
     val query: String = "",
     val searchResults: List<Contact> = emptyList(),
     val isTelephonyAvailable: Boolean = true,
+    /** Accesos directos elegidos por el usuario, en su orden. */
+    val shortcuts: List<com.studiolexair.movaphone.core.navigation.HomeShortcuts.Shortcut> = emptyList(),
     val errorMessage: String? = null
 )
 
@@ -40,6 +42,7 @@ class HomeViewModel(
     private val callsRepository: CallsRepository,
     private val contactsRepository: ContactsRepository,
     private val emergencyRepository: EmergencyRepository,
+    private val settingsStore: com.studiolexair.movaphone.core.security.settings.MovaSettingsStore,
     telephonyAvailable: Boolean
 ) : ViewModel() {
 
@@ -53,7 +56,12 @@ class HomeViewModel(
         val missed: Int
     )
 
-    private data class ExtraData(val emergencyCount: Int, val query: String, val error: String?)
+    private data class ExtraData(
+        val emergencyCount: Int,
+        val query: String,
+        val error: String?,
+        val settings: com.studiolexair.movaphone.core.security.settings.MovaSettings
+    )
 
     private val coreFlow = combine(
         callsRepository.observeRecentCalls(6),
@@ -62,20 +70,32 @@ class HomeViewModel(
         callsRepository.observeMissedCount()
     ) { recent, favorites, contacts, missed -> CoreData(recent, favorites, contacts, missed) }
 
-    private val extraFlow = combine(emergencyRepository.observeContacts(), queryState, errorState) { emergency, query, error ->
-        ExtraData(emergency.size, query, error)
+    private val extraFlow = combine(
+        emergencyRepository.observeContacts(),
+        queryState,
+        errorState,
+        settingsStore.settings
+    ) { emergency, query, error, settings ->
+        ExtraData(emergency.size, query, error, settings)
     }
 
     val uiState: StateFlow<HomeUiState> = combine(coreFlow, extraFlow) { core, extra ->
         HomeUiState(
+            userName = extra.settings.userName.ifBlank { "Usuario" },
+            shortcuts = com.studiolexair.movaphone.core.navigation.HomeShortcuts
+                .resolve(extra.settings.homeShortcuts),
             recentCalls = core.recent,
             favorites = core.favorites,
             contactsCount = core.contacts.size,
             missedCount = core.missed,
             emergencyContactsCount = extra.emergencyCount,
             query = extra.query,
-            searchResults = if (extra.query.isBlank()) emptyList() else core.contacts.filter {
-                it.displayName.contains(extra.query, ignoreCase = true) || it.phoneNumber.contains(extra.query)
+            searchResults = if (extra.query.isBlank()) {
+                emptyList()
+            } else {
+                // Comparador tolerante: acentos, emojis, mayúsculas y nombres parecidos.
+                com.studiolexair.movaphone.domain.contacts.matcher.ContactMatcher
+                    .rank(extra.query, core.contacts, limit = 8)
             }.take(6),
             isTelephonyAvailable = telephonyAvailable,
             errorMessage = extra.error
@@ -126,9 +146,18 @@ class HomeViewModel(
             callsRepository: CallsRepository,
             contactsRepository: ContactsRepository,
             emergencyRepository: EmergencyRepository,
+            settingsStore: com.studiolexair.movaphone.core.security.settings.MovaSettingsStore,
             telephonyAvailable: Boolean
         ) = viewModelFactory {
-            initializer { HomeViewModel(callsRepository, contactsRepository, emergencyRepository, telephonyAvailable) }
+            initializer {
+                HomeViewModel(
+                    callsRepository,
+                    contactsRepository,
+                    emergencyRepository,
+                    settingsStore,
+                    telephonyAvailable
+                )
+            }
         }
     }
 }

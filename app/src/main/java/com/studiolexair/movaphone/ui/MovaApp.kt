@@ -11,10 +11,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,6 +63,8 @@ fun MovaApp(
     val scope = rememberCoroutineScope()
 
     var showSplash by remember { mutableStateOf(true) }
+    // El primer arranque va en dos pasos: permisos, después perfil.
+    var profileStepDone by remember { mutableStateOf(false) }
 
     // Toques de los widgets: se navega cuando la app ya está lista (sin saltarse el splash).
     LaunchedEffect(deepLink, showSplash) {
@@ -121,6 +126,17 @@ fun MovaApp(
                     if (showBottomBar) {
                         MovaBottomBar(currentRoute = currentRoute, onSelect = navigator::toTopLevel)
                     }
+                },
+                floatingActionButton = {
+                    // «MOVA» siempre a mano: desde cualquier pantalla abre el chat del asistente.
+                    val assistantVisible = currentRoute != MovaRoutes.ASSISTANT &&
+                        currentRoute != MovaRoutes.ASSISTANT_SETTINGS &&
+                        currentRoute != MovaRoutes.ASSISTANT_HELP
+                    if (assistantVisible && !showSplash && settings.onboardingCompleted) {
+                        FloatingActionButton(onClick = { navigator.toAssistant() }) {
+                            Icon(Icons.Filled.AutoAwesome, contentDescription = "Abrir el asistente MOVA")
+                        }
+                    }
                 }
             ) { padding ->
                 MovaNavHost(
@@ -140,14 +156,26 @@ fun MovaApp(
                 SplashScreen(onReady = { showSplash = false })
             }
 
-            // Primer uso: se piden los permisos necesarios con su explicación.
+            // Primer uso, en dos pasos: primero los permisos (con su explicación) y después
+            // el perfil, para que MOVA sepa cómo llamarte desde el primer saludo.
             if (!showSplash && !settings.onboardingCompleted) {
-                PermissionsScreen(
-                    navigator = navigator,
-                    firstRun = true,
-                    onFinish = { scope.launch { container.settingsStore.setOnboardingCompleted(true) } },
-                    onOpenSystemSettings = openSystemSettings
-                )
+                if (!profileStepDone) {
+                    PermissionsScreen(
+                        navigator = navigator,
+                        firstRun = true,
+                        onFinish = { profileStepDone = true },
+                        onOpenSystemSettings = openSystemSettings
+                    )
+                } else {
+                    ProfileRoute(
+                        settingsStore = container.settingsStore,
+                        navigator = navigator,
+                        firstRun = true,
+                        onFinish = {
+                            scope.launch { container.settingsStore.setOnboardingCompleted(true) }
+                        }
+                    )
+                }
             }
         }
 
@@ -155,7 +183,13 @@ fun MovaApp(
     }
 }
 
-/** Barra inferior con los cuatro destinos del mockup. */
+/**
+ * Barra inferior con los cinco destinos principales.
+ *
+ * Antes «Mensajes» estaba escondido en el menú de tres puntos y había que dar rodeos para
+ * llegar; ahora es una pestaña más, y el asistente tiene su propio botón flotante para que
+ * se pueda abrir desde cualquier pantalla.
+ */
 @Composable
 private fun MovaBottomBar(currentRoute: String?, onSelect: (TopLevelDestination) -> Unit) {
     NavigationBar {
@@ -174,5 +208,6 @@ private fun TopLevelDestination.icon(): ImageVector = when (this) {
     TopLevelDestination.HOME -> Icons.Filled.Home
     TopLevelDestination.CONTACTS -> Icons.Filled.Contacts
     TopLevelDestination.CALLS -> Icons.Filled.Call
+    TopLevelDestination.MESSAGES -> Icons.Filled.Message
     TopLevelDestination.MORE -> Icons.Filled.MoreHoriz
 }

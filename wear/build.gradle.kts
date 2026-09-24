@@ -22,13 +22,34 @@ android {
         applicationId = "com.studiolexair.movaphone.wear"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.1"
+        versionCode = 4
+        versionName = "1.2"
+    }
+
+    // El reloj también se firma: en el 1.1 el APK salía sin firma y no se podía instalar.
+    // Se usa la misma clave que el teléfono (llega por variables de entorno; si no está,
+    // se firma con la clave de depuración para que el APK siempre sea instalable).
+    signingConfigs {
+        create("releaseFromEnv") {
+            val keystoreFile = rootProject.file(System.getenv("MOVA_KEYSTORE_PATH") ?: "mova-release.jks")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("MOVA_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("MOVA_KEY_ALIAS")
+                keyPassword = System.getenv("MOVA_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            val keystoreFile = rootProject.file(System.getenv("MOVA_KEYSTORE_PATH") ?: "mova-release.jks")
+            signingConfig = if (keystoreFile.exists()) {
+                signingConfigs.getByName("releaseFromEnv")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 

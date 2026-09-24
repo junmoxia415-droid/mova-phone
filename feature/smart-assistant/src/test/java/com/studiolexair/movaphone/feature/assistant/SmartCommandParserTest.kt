@@ -29,7 +29,9 @@ class SmartCommandParserTest {
         val command = SmartCommandParser.parse("Enviar mensaje a Luis diciendo llego tarde")
         assertThat(command).isInstanceOf(SmartCommand.SendMessage::class.java)
         val message = command as SmartCommand.SendMessage
-        assertThat(message.target).isEqualTo("luis")
+        // El destinatario se conserva tal cual se dijo («Luis»), no en minúsculas: es el nombre
+        // que luego se busca en la agenda y el que MOVA repite en voz alta.
+        assertThat(message.target).isEqualTo("Luis")
         assertThat(message.body).isEqualTo("llego tarde")
     }
 
@@ -62,6 +64,16 @@ class SmartCommandParserTest {
         val command = SmartCommandParser.parse("hazme un café")
         assertThat(command).isInstanceOf(SmartCommand.Unknown::class.java)
         assertThat(command.isSensitive).isFalse()
+    }
+
+    @Test
+    fun `conserva tildes y mayusculas del nombre dictado`() {
+        val call = SmartCommandParser.parse("Llamar a Mamá") as SmartCommand.Call
+        assertThat(call.target).isEqualTo("Mamá")
+        val nena = SmartCommandParser.parse("llamar a la nena") as SmartCommand.Call
+        assertThat(nena.target).isEqualTo("nena")
+        val emoji = SmartCommandParser.parse("llama a Nena ❤️") as SmartCommand.Call
+        assertThat(emoji.target).isEqualTo("Nena")
     }
 
     @Test

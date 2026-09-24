@@ -21,6 +21,9 @@ class SettingsViewModel(private val store: MovaSettingsStore) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MovaSettings.DEFAULT)
 
     fun setUserName(value: String) = viewModelScope.launch { store.setUserName(value) }
+
+    /** Personalización máxima: el usuario elige y ordena sus accesos directos. */
+    fun setHomeShortcuts(value: String) = viewModelScope.launch { store.setHomeShortcuts(value) }
     fun setHaptic(value: Boolean) = viewModelScope.launch { store.setHapticKeypad(value) }
     fun setConfirmCall(value: Boolean) = viewModelScope.launch { store.setConfirmBeforeCalling(value) }
     fun setBlockUnknown(value: Boolean) = viewModelScope.launch { store.setBlockUnknownNumbers(value) }
@@ -28,6 +31,9 @@ class SettingsViewModel(private val store: MovaSettingsStore) : ViewModel() {
     fun setSosSms(value: Boolean) = viewModelScope.launch { store.setSosSendSms(value) }
     fun setSosLocation(value: Boolean) = viewModelScope.launch { store.setSosShareLocation(value) }
     fun setSosCall(value: Boolean) = viewModelScope.launch { store.setSosPlaceCall(value) }
+    fun setShareLocationOnSos(value: Boolean) = viewModelScope.launch { store.setShareLocationOnSos(value) }
+    fun setShowDeviceContacts(value: Boolean) = viewModelScope.launch { store.setShowDeviceContacts(value) }
+    fun setQuickReplies(value: Boolean) = viewModelScope.launch { store.setQuickReplies(value) }
     fun setStoreCalls(value: Boolean) = viewModelScope.launch { store.setStoreCallHistory(value) }
     fun setStoreLocation(value: Boolean) = viewModelScope.launch { store.setStoreLocationHistory(value) }
     fun setAutomations(value: Boolean) = viewModelScope.launch { store.setAutomations(value) }
