@@ -121,20 +121,20 @@ fun DialerRoute(
             {
                 MovaCard {
                     Text(
-                        text = "MOVA todavia no es tu app de telefono",
+                        text = "MOVA todavía no es tu app de teléfono",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Mientras no se lo permitas, Android ensena SU pantalla durante la " +
-                            "llamada en lugar de la de MOVA. Se arregla en un toque y solo hay que " +
+                        text = "Mientras no se lo permitas, Android enseña SU pantalla durante la " +
+                            "llamada en lugar de la de MOVA. Se arregla en un toque y sólo hay que " +
                             "hacerlo una vez.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MovaTheme.extra.textSecondary,
                         modifier = Modifier.padding(top = MovaDimens.spaceXs)
                     )
                     MovaPrimaryButton(
-                        text = "Hacer que MOVA sea la app de telefono",
+                        text = "Hacer que MOVA sea la app de teléfono",
                         icon = Icons.Filled.PhoneAndroid,
                         modifier = Modifier.padding(top = MovaDimens.spaceSm),
                         onClick = {
@@ -214,7 +214,7 @@ fun DialerScreen(
             state.lastDialed?.let { number ->
                 MovaCard {
                     Text(
-                        text = "Ultima llamada",
+                        text = "Última llamada",
                         style = MaterialTheme.typography.labelMedium,
                         color = MovaTheme.extra.textMuted
                     )
