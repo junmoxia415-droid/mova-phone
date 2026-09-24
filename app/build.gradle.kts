@@ -7,6 +7,13 @@ android {
     defaultConfig {
         // Permite que "MOVA Phone" administre llamadas/SMS sólo en la versión debug si es necesario.
         manifestPlaceholders["movaRoleDebug"] = "false"
+
+        // El modelo de IA local trae sus propias librerías nativas (unos 13 MB por arquitectura).
+        // Se incluyen las que usan los móviles de verdad (arm64 y arm de 32 bits) y x86_64 para
+        // quien pruebe en un emulador moderno; la x86 de 32 bits ya no la usa ningún teléfono.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
     buildTypes {
         getByName("release") {

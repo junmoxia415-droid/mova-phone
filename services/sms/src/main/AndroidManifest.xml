@@ -4,6 +4,10 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" />
+    <!-- Cuarta pieza que Android exige a la app de mensajes predeterminada:
+         responder con un mensaje corto desde la pantalla de llamada. -->
+    <uses-permission android:name="android.permission.SEND_RESPOND_VIA_MESSAGE" />
 
     <application>
         <receiver
@@ -38,6 +42,21 @@
                 <data android:mimeType="application/vnd.wap.mms-message" />
             </intent-filter>
         </receiver>
+
+        <!-- Respuesta rápida desde la pantalla de llamada del sistema (rol de SMS). -->
+        <service
+            android:name=".MovaRespondViaMessageService"
+            android:exported="true"
+            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+        </service>
 
         <!-- Confirmación real del envío de SMS (uso interno de la app). -->
         <receiver
