@@ -316,6 +316,7 @@ fun SettingsSectionRoute(
                             icon = Icons.Filled.Message
                         )
                     }
+                    item { MessageTransportCard() }
                     item { WearBridgeCard() }
                 }
                 "permisos" -> {
@@ -404,6 +405,39 @@ fun SettingsSectionRoute(
                 else -> item { MovaInfoBanner(message = "Sección no reconocida.", tone = PillTone.Warning) }
             }
         }
+    }
+}
+
+/**
+ * Aviso honesto: por dónde salen hoy los mensajes.
+ *
+ * MOVA ya es la app de mensajes del sistema y los envía por la red de telefonía (SMS).
+ * La mensajería por Internet (tipo WhatsApp) necesita un servidor propio que todavía no
+ * existe: decirlo aquí evita prometer lo que no hay. Por dentro, la app ya tiene el
+ * contrato MessageProvider listo para añadir ese transporte el día que haya servidor.
+ */
+@Composable
+private fun MessageTransportCard() {
+    MovaCard {
+        MovaListRow(
+            title = "Mensajes: SMS de tu operador",
+            subtitle = "Salen por la red de telefonía, igual que en la app de mensajes del sistema. " +
+                "Sin Internet de por medio y sin servidores de terceros.",
+            leading = {
+                androidx.compose.material3.Icon(
+                    Icons.Filled.Message,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        )
+        MovaInfoBanner(
+            message = "La mensajería por Internet todavía no está activa: necesita un servidor propio " +
+                "que no se ha construido. MOVA ya tiene la pieza interna preparada para conectarla " +
+                "cuando exista, y el día que la haya lo dirá aquí.",
+            tone = PillTone.Neutral,
+            icon = Icons.Filled.Info
+        )
     }
 }
 
