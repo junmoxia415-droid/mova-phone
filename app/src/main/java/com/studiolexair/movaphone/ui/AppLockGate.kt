@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,10 +42,57 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppLockGate(container: MovaContainer, settings: MovaSettings) {
     val unlocked by container.appLockController.isUnlocked.collectAsStateWithLifecycle()
-    if (!settings.appLockEnabled || unlocked) return
-
     val context = LocalContext.current
     val scope = remember { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()) }
+
+    // ¿Hay alguna forma real de desbloquear? PIN guardado o biometría disponible.
+    var pinIsSet by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(settings.appLockEnabled, settings.biometricEnabled) {
+        pinIsSet = container.pinManager.isPinSet()
+    }
+    val biometricUsable = settings.biometricEnabled && container.biometricManager.isAvailable()
+    val canUnlock = pinIsSet == true || biometricUsable
+
+    // Red de seguridad: bloqueo activado sin PIN ni biometría -> se desactiva y se entra igual.
+    LaunchedEffect(settings.appLockEnabled, canUnlock) {
+        if (settings.appLockEnabled && !canUnlock) {
+            container.settingsStore.setAppLock(false)
+            container.appLockController.unlock()
+        }
+    }
+
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    if (showResetDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("¿Restablecer el bloqueo?") },
+            text = {
+                Text(
+                    "Se desactivará el bloqueo y se borrará el PIN guardado para que puedas entrar. " +
+                        "Tus contactos, llamadas y mensajes NO se borran. Después podrás crear un PIN nuevo."
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showResetDialog = false
+                    scope.launch {
+                        container.pinManager.clearPin()
+                        container.settingsStore.setPinEnabled(false)
+                        container.settingsStore.setBiometric(false)
+                        container.settingsStore.setAppLock(false)
+                        container.appLockController.unlock()
+                    }
+                }) { Text("Restablecer") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showResetDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (!settings.appLockEnabled || !canUnlock || unlocked) return
+
     var pin by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
 
@@ -114,6 +162,13 @@ fun AppLockGate(container: MovaContainer, settings: MovaSettings) {
                     }
                 }
             )
+
+            androidx.compose.material3.TextButton(
+                onClick = { showResetDialog = true },
+                modifier = Modifier.padding(top = MovaDimens.spaceSm)
+            ) {
+                Text("He olvidado el PIN")
+            }
 
             if (settings.biometricEnabled && container.biometricManager.isAvailable()) {
                 MovaSecondaryButton(

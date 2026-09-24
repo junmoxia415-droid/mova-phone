@@ -37,6 +37,7 @@ import com.studiolexair.movaphone.di.emergencyFactory
 import com.studiolexair.movaphone.di.homeFactory
 import com.studiolexair.movaphone.di.locationFactory
 import com.studiolexair.movaphone.di.messagesFactory
+import com.studiolexair.movaphone.di.placesFactory
 import com.studiolexair.movaphone.di.securityFactory
 import com.studiolexair.movaphone.di.settingsFactory
 import com.studiolexair.movaphone.feature.about.AboutRoute
@@ -45,6 +46,7 @@ import com.studiolexair.movaphone.feature.about.PrivacyRoute
 import com.studiolexair.movaphone.feature.assistant.SmartAssistantRoute
 import com.studiolexair.movaphone.feature.automation.AutomationEditorRoute
 import com.studiolexair.movaphone.feature.automation.AutomationHistoryRoute
+import com.studiolexair.movaphone.feature.automation.PlacesRoute
 import com.studiolexair.movaphone.feature.automation.AutomationRoute
 import com.studiolexair.movaphone.feature.calls.CallsRoute
 import com.studiolexair.movaphone.feature.contacts.ContactDetailRoute
@@ -203,6 +205,10 @@ fun MovaNavHost(
 
         composable(MovaRoutes.AUTOMATION_HISTORY) {
             AutomationHistoryRoute(viewModel(factory = container.automationFactory))
+        }
+
+        composable(MovaRoutes.AUTOMATION_PLACES) {
+            PlacesRoute(navigator, viewModel(factory = container.placesFactory))
         }
 
         composable(MovaRoutes.SECURITY) { SecurityRoute(navigator, viewModel(factory = container.securityFactory)) }

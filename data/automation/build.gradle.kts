@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":data:emergency"))
     implementation(project(":data:location"))
     implementation(libs.work.runtime.ktx)
+    implementation(libs.datastore.preferences)
     testImplementation(libs.junit)
     testImplementation(libs.truth)
     testImplementation(libs.kotlinx.coroutines.test)

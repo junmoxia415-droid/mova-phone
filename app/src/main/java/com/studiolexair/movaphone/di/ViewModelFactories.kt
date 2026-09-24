@@ -2,6 +2,7 @@ package com.studiolexair.movaphone.di
 
 import com.studiolexair.movaphone.feature.assistant.SmartAssistantViewModel
 import com.studiolexair.movaphone.feature.automation.AutomationViewModel
+import com.studiolexair.movaphone.feature.automation.PlacesViewModel
 import com.studiolexair.movaphone.feature.calls.CallsViewModel
 import com.studiolexair.movaphone.feature.contacts.ContactsViewModel
 import com.studiolexair.movaphone.feature.dialer.DialerViewModel
@@ -72,6 +73,12 @@ val MovaContainer.automationFactory get() = AutomationViewModel.factory(
     templates = automationTemplates
 )
 
+val MovaContainer.placesFactory get() = PlacesViewModel.factory(
+    store = geofenceStore,
+    monitor = geofenceMonitor,
+    locationRepository = locationRepository
+)
+
 val MovaContainer.securityFactory get() = SecurityViewModel.factory(
     securityDao = database.securityDao(),
     settingsStore = settingsStore,
@@ -83,9 +90,12 @@ val MovaContainer.securityFactory get() = SecurityViewModel.factory(
 val MovaContainer.settingsFactory get() = SettingsViewModel.factory(settingsStore)
 
 val MovaContainer.assistantFactory get() = SmartAssistantViewModel.factory(
+    context = applicationContext,
     contactsRepository = contactsRepository,
     placeCall = placeCall,
     messageRepository = messageRepository,
     locationRepository = locationRepository,
-    sosOrchestrator = sosOrchestrator
+    sosOrchestrator = sosOrchestrator,
+    modelManager = localModelManager,
+    preferences = assistantPreferences
 )

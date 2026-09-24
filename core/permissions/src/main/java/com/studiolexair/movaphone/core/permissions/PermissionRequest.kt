@@ -14,7 +14,10 @@ import androidx.compose.runtime.remember
 class PermissionRequester(private val launcher: (Array<String>) -> Unit) {
 
     fun request(vararg permissions: MovaPermission) {
-        val applicable = permissions.filter { Build.VERSION.SDK_INT >= it.minSdk }
+        val applicable = permissions
+            .filter { Build.VERSION.SDK_INT >= it.minSdk }
+            // Los que Android sólo concede desde Ajustes no se piden con diálogo.
+            .filterNot { it == MovaPermission.BACKGROUND_LOCATION && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R }
         if (applicable.isEmpty()) return
         launcher(applicable.map { it.androidPermission }.toTypedArray())
     }

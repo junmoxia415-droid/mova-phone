@@ -1,6 +1,7 @@
 package com.studiolexair.movaphone.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Contacts
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -30,22 +33,28 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.studiolexair.movaphone.core.common.util.SystemRoles
 import com.studiolexair.movaphone.core.common.util.TextFormatters
 import com.studiolexair.movaphone.core.designsystem.component.AuroraBackground
 import com.studiolexair.movaphone.core.designsystem.component.MovaCard
 import com.studiolexair.movaphone.core.designsystem.component.MovaInfoBanner
 import com.studiolexair.movaphone.core.designsystem.component.MovaListRow
 import com.studiolexair.movaphone.core.designsystem.component.MovaScreenHeader
+import com.studiolexair.movaphone.core.designsystem.component.MovaPrimaryButton
 import com.studiolexair.movaphone.core.designsystem.component.MovaSecondaryButton
 import com.studiolexair.movaphone.core.designsystem.component.MovaSwitchRow
 import com.studiolexair.movaphone.core.designsystem.component.PillTone
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.MovaPermission
 import com.studiolexair.movaphone.core.permissions.rememberPermissionChecker
+import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
 
 data class SettingsSection(val id: String, val title: String, val icon: ImageVector)
 
@@ -57,6 +66,7 @@ private val sections = listOf(
     SettingsSection("sos", "SOS", Icons.Filled.Emergency),
     SettingsSection("security", "Seguridad", Icons.Filled.Lock),
     SettingsSection("permisos", "Permisos de la aplicación", Icons.Filled.VerifiedUser),
+    SettingsSection("sistema", "MOVA como app del sistema", Icons.Filled.PhoneAndroid),
     SettingsSection("privacy", "Privacidad", Icons.Filled.Storage),
     SettingsSection("automation", "Automatizaciones", Icons.Filled.Bolt),
     SettingsSection("location", "Ubicación", Icons.Filled.LocationOn),
@@ -110,6 +120,54 @@ fun SettingsRoute(
                     onClick = { navigator.toPrivacy() }
                 )
             }
+        }
+    }
+}
+
+/**
+ * Tarjeta para pedir un rol del sistema (teléfono o mensajes).
+ * Muestra el estado real y abre el diálogo del sistema correspondiente.
+ */
+@Composable
+private fun SystemRoleCard(
+    title: String,
+    role: String,
+    icon: ImageVector
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var refresh by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { refresh++ }
+
+    val summary = androidx.compose.runtime.remember(refresh, role) { SystemRoles.summary(context, role) }
+    val isDefault = androidx.compose.runtime.remember(refresh, role) { SystemRoles.holdsRole(context, role) }
+
+    MovaCard {
+        MovaListRow(
+            title = title,
+            subtitle = summary,
+            leading = {
+                androidx.compose.material3.Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isDefault) MovaTheme.extra.success else MaterialTheme.colorScheme.primary
+                )
+            }
+        )
+        if (!isDefault) {
+            MovaSecondaryButton(
+                text = "Usar MOVA Phone como $title",
+                icon = icon,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = MovaDimens.spaceSm),
+                onClick = {
+                    val intent = SystemRoles.requestIntent(context, role)
+                    if (intent != null) launcher.launch(intent)
+                    refresh++
+                }
+            )
         }
     }
 }
@@ -235,6 +293,31 @@ fun SettingsSectionRoute(
                 "security" -> {
                     item { MovaSecondaryButton(text = "Abrir centro de seguridad", onClick = { navigator.toSecurity() }) }
                 }
+                "sistema" -> {
+                    item {
+                        MovaInfoBanner(
+                            message = "Con el rol del sistema, MOVA Phone sustituye por completo a la app de teléfono y a la de mensajes: " +
+                                "las llamadas y los SMS son de MOVA, con su pantalla de llamada y su bandeja.",
+                            tone = PillTone.Brand,
+                            icon = Icons.Filled.PhoneAndroid
+                        )
+                    }
+                    item {
+                        SystemRoleCard(
+                            title = "Aplicación de teléfono",
+                            role = SystemRoles.DIALER,
+                            icon = Icons.Filled.Call
+                        )
+                    }
+                    item {
+                        SystemRoleCard(
+                            title = "Aplicación de mensajes",
+                            role = SystemRoles.SMS,
+                            icon = Icons.Filled.Message
+                        )
+                    }
+                    item { WearBridgeCard() }
+                }
                 "permisos" -> {
                     item {
                         MovaInfoBanner(
@@ -319,6 +402,76 @@ fun SettingsSectionRoute(
                     item { MovaInfoBanner(message = "Más idiomas llegarán en futuras versiones.", tone = PillTone.Neutral, icon = Icons.Filled.Language) }
                 }
                 else -> item { MovaInfoBanner(message = "Sección no reconocida.", tone = PillTone.Warning) }
+            }
+        }
+    }
+}
+
+/**
+ * Reloj Wear OS: MOVA habla con la muñeca por Bluetooth, sin Google Play Services.
+ * Desde aquí se enciende o apaga el puente y se piden los permisos que falten.
+ */
+@Composable
+private fun WearBridgeCard() {
+    val context = LocalContext.current
+    val state by com.studiolexair.movaphone.services.wear.BridgeState.state.collectAsStateWithLifecycle()
+    val permission = rememberPermissionHandle(
+        listOf(
+            MovaPermission.BLUETOOTH_CONNECT,
+            MovaPermission.BLUETOOTH_ADVERTISE
+        )
+    )
+
+    MovaCard {
+        Column(verticalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)) {
+            Text(
+                text = "Reloj Wear OS",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "MOVA lleva las llamadas, los mensajes y el SOS a tu reloj por Bluetooth directo: " +
+                    "sin Google y sin nube. Instala la app «MOVA Reloj» en la muñeca y conecta aquí.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MovaTheme.extra.textSecondary
+            )
+            Text(
+                text = when {
+                    state.connected -> "Conectado (${state.devices} dispositivo/s)"
+                    state.running -> state.detail
+                    else -> "Puente apagado"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (state.connected) MovaTheme.extra.success else MovaTheme.extra.textMuted
+            )
+            if (!permission.granted) {
+                MovaInfoBanner(
+                    message = "Faltan permisos de Bluetooth para que el reloj pueda conectar.",
+                    tone = PillTone.Warning,
+                    icon = Icons.Filled.Bluetooth
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)) {
+                MovaPrimaryButton(
+                    text = if (state.running) "Detener el puente" else "Conectar con el reloj",
+                    icon = Icons.Filled.Bluetooth,
+                    onClick = {
+                        if (state.running) {
+                            com.studiolexair.movaphone.services.wear.MovaWearBridgeService.stop(context)
+                        } else if (!permission.granted) {
+                            permission.request()
+                        } else {
+                            com.studiolexair.movaphone.services.wear.MovaWearBridgeService.start(context)
+                        }
+                    }
+                )
+                if (state.running) {
+                    MovaSecondaryButton(
+                        text = "Permisos",
+                        icon = Icons.Filled.Bluetooth,
+                        onClick = { permission.request() }
+                    )
+                }
             }
         }
     }

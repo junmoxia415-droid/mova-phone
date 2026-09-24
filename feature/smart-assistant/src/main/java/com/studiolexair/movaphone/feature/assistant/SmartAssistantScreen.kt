@@ -1,10 +1,5 @@
 package com.studiolexair.movaphone.feature.assistant
 
-import android.app.Activity
-import android.content.Intent
-import android.speech.RecognizerIntent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,12 +11,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,10 +43,16 @@ import com.studiolexair.movaphone.core.designsystem.component.PillTone
 import com.studiolexair.movaphone.core.designsystem.theme.MovaDimens
 import com.studiolexair.movaphone.core.designsystem.theme.MovaTheme
 import com.studiolexair.movaphone.core.navigation.MovaNavigator
+import com.studiolexair.movaphone.core.permissions.MovaPermission
+import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
+import com.studiolexair.movaphone.feature.assistant.ai.LocalModel
+import com.studiolexair.movaphone.feature.assistant.voice.OfflineVoiceInput
 
 /**
  * Asistente inteligente de MOVA Phone.
- * La voz la transcribe el reconocedor del sistema; la interpretación es local.
+ *
+ * La voz se transcribe **en el propio teléfono** (sin Internet) y la interpretación la hace
+ * el intérprete local de MOVA o el modelo de lenguaje que el usuario descargue en el móvil.
  * Toda acción sensible se confirma antes de ejecutarse.
  */
 @Composable
@@ -54,19 +62,29 @@ fun SmartAssistantRoute(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val modelState by viewModel.modelState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var textInput by remember { mutableStateOf("") }
 
-    val voiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                .orEmpty()
-            if (spoken.isNotBlank()) viewModel.interpret(spoken, navigator::openFromAssistant)
-        }
+    val micPermission = rememberPermissionHandle(listOf(MovaPermission.RECORD_AUDIO))
+    val voice = remember(context) { OfflineVoiceInput(context) }
+    val offlineAvailable = remember(context) { voice.isOnDeviceAvailable() }
+
+    DisposableEffect(voice) {
+        onDispose { voice.stop() }
+    }
+
+    fun listen() {
+        viewModel.onVoiceStarted()
+        voice.start(
+            languageTag = "es-ES",
+            onPartial = { viewModel.onVoicePartial(it) },
+            onResult = { spoken ->
+                viewModel.onVoiceResult(spoken)
+                viewModel.interpret(spoken, navigator::openFromAssistant)
+            },
+            onError = { viewModel.onVoiceError(it) }
+        )
     }
 
     AuroraBackground(modifier = modifier) {
@@ -78,23 +96,48 @@ fun SmartAssistantRoute(
             item {
                 MovaScreenHeader(
                     title = "Asistente MOVA",
-                    subtitle = "Órdenes por voz o escritas, siempre bajo tu control"
+                    subtitle = "Voz sin conexión y razonamiento en tu teléfono"
                 )
+            }
+
+            if (!offlineAvailable) {
+                item {
+                    MovaInfoBanner(
+                        message = "Para entenderte sin Internet, Android necesita el paquete de voz en el " +
+                            "teléfono: Ajustes → Sistema → Idiomas → Voz → Descargar. Si no, MOVA usará lo que " +
+                            "tenga el sistema y podrás escribir la orden.",
+                        tone = PillTone.Warning,
+                        icon = Icons.Filled.CloudOff
+                    )
+                }
             }
 
             item {
                 MovaPrimaryButton(
-                    text = "Hablar",
-                    icon = Icons.Filled.Mic,
+                    text = when {
+                        state.listening -> "Detener y escuchar"
+                        else -> "Hablar"
+                    },
+                    icon = if (state.listening) Icons.Filled.MicOff else Icons.Filled.Mic,
                     onClick = {
-                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES")
-                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Di una orden para MOVA Phone")
+                        if (!micPermission.granted) {
+                            micPermission.request()
+                        } else if (state.listening) {
+                            voice.stop()
+                            viewModel.onVoiceStopped()
+                        } else {
+                            listen()
                         }
-                        runCatching { voiceLauncher.launch(intent) }
                     }
                 )
+            }
+
+            state.partial.takeIf { it.isNotBlank() }?.let { partial ->
+                item { MovaInfoBanner(message = "Te estoy oyendo: «$partial»", tone = PillTone.Brand, icon = Icons.Filled.Mic) }
+            }
+
+            state.voiceNotice?.let { notice ->
+                item { MovaInfoBanner(message = notice, tone = PillTone.Warning, icon = Icons.Filled.MicOff) }
             }
 
             item {
@@ -119,7 +162,13 @@ fun SmartAssistantRoute(
             }
 
             state.transcript.takeIf { it.isNotBlank() }?.let { heard ->
-                item { MovaInfoBanner(message = "Escuché: «$heard»", tone = PillTone.Brand, icon = Icons.Filled.AutoAwesome) }
+                item {
+                    MovaInfoBanner(
+                        message = "Escuché: «$heard»" + (state.interpretedBy?.let { " · interpretado por $it" } ?: ""),
+                        tone = PillTone.Brand,
+                        icon = Icons.Filled.AutoAwesome
+                    )
+                }
             }
 
             state.command?.let { command ->
@@ -150,6 +199,62 @@ fun SmartAssistantRoute(
                 item { MovaInfoBanner(message = result, tone = PillTone.Success) }
             }
 
+            // ---------- IA local: modelo descargado en el teléfono ----------
+            item {
+                Text(
+                    text = "Inteligencia artificial en el teléfono",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MovaTheme.extra.textMuted
+                )
+            }
+
+            item {
+                MovaInfoBanner(
+                    message = "MOVA puede razonar lo que dices con un modelo pequeño guardado en el propio " +
+                        "teléfono. No hace falta cuenta, ni nube, ni conexión para usarlo una vez descargado.",
+                    tone = PillTone.Brand,
+                    icon = Icons.Filled.AutoAwesome
+                )
+            }
+
+            items(modelState.models, key = { it.id }) { model ->
+                ModelCard(
+                    model = model,
+                    downloaded = modelState.downloadedId == model.id,
+                    downloading = modelState.downloadingId == model.id,
+                    progress = modelState.progress,
+                    onDownload = { viewModel.downloadModel(model) },
+                    onDelete = { viewModel.deleteModel(model) }
+                )
+            }
+
+            item {
+                MovaCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Usar el modelo para entenderte", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                text = if (modelState.downloadedId == null) {
+                                    "Descarga primero un modelo. Sin modelo, MOVA usa su intérprete de reglas (también sin Internet)."
+                                } else {
+                                    "Todo el razonamiento ocurre dentro del teléfono."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MovaTheme.extra.textSecondary
+                            )
+                        }
+                        Switch(checked = modelState.useModel, onCheckedChange = { viewModel.setUseModel(it) })
+                    }
+                }
+            }
+
+            modelState.message?.let { message ->
+                item { MovaInfoBanner(message = message, tone = PillTone.Neutral) }
+            }
+
             item {
                 Text(
                     text = "Ejemplos",
@@ -176,6 +281,55 @@ fun SmartAssistantRoute(
                         text = "· $entry",
                         style = MaterialTheme.typography.bodySmall,
                         color = MovaTheme.extra.textSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Tarjeta de un modelo: tamaño, estado real y botón de descargar o borrar. */
+@Composable
+private fun ModelCard(
+    model: LocalModel,
+    downloaded: Boolean,
+    downloading: Boolean,
+    progress: Float,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit
+) {
+    MovaCard {
+        Column(verticalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)) {
+            Text(model.name, style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = model.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MovaTheme.extra.textSecondary
+            )
+            Text(
+                text = when {
+                    downloaded -> "Descargado y listo para funcionar sin conexión"
+                    downloading -> "Descargando… ${(progress * 100).toInt()} %"
+                    else -> "No descargado"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (downloaded) MovaTheme.extra.success else MovaTheme.extra.textMuted
+            )
+            if (downloading) {
+                LinearProgressIndicator(
+                    progress = { progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(MovaDimens.spaceSm)) {
+                if (downloaded) {
+                    MovaSecondaryButton(text = "Borrar", icon = Icons.Filled.Delete, onClick = onDelete)
+                } else {
+                    MovaPrimaryButton(
+                        text = "Descargar",
+                        icon = Icons.Filled.Download,
+                        enabled = !downloading,
+                        onClick = onDownload
                     )
                 }
             }

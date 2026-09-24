@@ -18,4 +18,8 @@ object CallServiceDependencies {
     @Volatile var automationEngine: AutomationEngine? = null
     @Volatile var contactNameResolver: ((String?) -> String?)? = null
     @Volatile var onIncomingCall: (suspend (String?) -> Unit)? = null
+
+    /** La app abre su propia pantalla de llamada cuando Telecom entrega una llamada. */
+    @Volatile var onShowInCallUi: (() -> Unit)? = null
+    @Volatile var onHideInCallUi: (() -> Unit)? = null
 }

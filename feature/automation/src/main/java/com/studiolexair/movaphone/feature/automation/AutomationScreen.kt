@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
@@ -57,6 +58,13 @@ fun AutomationRoute(
                 subtitle = "Reglas inteligentes para tu día a día",
                 actions = {
                     Icon(
+                        imageVector = Icons.Filled.Place,
+                        contentDescription = "Lugares guardados",
+                        tint = MovaTheme.extra.violet,
+                        modifier = Modifier.padding(end = MovaDimens.spaceSm)
+                            .clickable { navigator.toAutomationPlaces() }
+                    )
+                    Icon(
                         imageVector = Icons.Filled.History,
                         contentDescription = "Historial",
                         tint = MaterialTheme.colorScheme.primary,
@@ -74,6 +82,7 @@ fun AutomationRoute(
             ) {
                 AssistChip(onClick = { navigator.toAutomationEditor(null) }, label = { Text("Nueva regla") })
                 AssistChip(onClick = { navigator.toAutomationHistory() }, label = { Text("Historial") })
+                AssistChip(onClick = { navigator.toAutomationPlaces() }, label = { Text("Lugares") })
             }
 
             if (rules.isEmpty()) {

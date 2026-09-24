@@ -39,11 +39,14 @@ listOf("contacts", "calls", "messages", "emergency", "location", "automation")
     .forEach { include(":data:$it") }
 
 // ---------- services ----------
-listOf("calls", "sms", "location", "notifications")
+listOf("calls", "sms", "location", "notifications", "wear")
     .forEach { include(":services:$it") }
 
 // ---------- feature ----------
 listOf(
     "home", "dialer", "calls", "contacts", "favorites", "emergency", "messages",
-    "location", "automation", "security", "driving", "settings", "about", "smart-assistant"
+    "location", "automation", "security", "driving", "settings", "about", "smart-assistant", "incall"
 ).forEach { include(":feature:$it") }
+
+// ---------- aplicación del reloj (Wear OS) ----------
+include(":wear")

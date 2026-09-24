@@ -30,6 +30,9 @@ interface ContactDao {
     )
     fun search(query: String): Flow<List<ContactEntity>>
 
+    @Query("SELECT * FROM contacts ORDER BY isFavorite DESC, displayName COLLATE NOCASE ASC")
+    suspend fun allOnce(): List<ContactEntity>
+
     @Query("SELECT * FROM contacts WHERE normalizedNumber = :normalizedNumber LIMIT 1")
     suspend fun findByNormalizedNumber(normalizedNumber: String): ContactEntity?
 

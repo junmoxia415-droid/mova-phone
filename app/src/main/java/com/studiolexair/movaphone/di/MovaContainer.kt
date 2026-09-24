@@ -18,6 +18,8 @@ import com.studiolexair.movaphone.data.automation.engine.AutomationActionExecuto
 import com.studiolexair.movaphone.data.automation.engine.AutomationConditionEvaluator
 import com.studiolexair.movaphone.data.automation.engine.AutomationEngineImpl
 import com.studiolexair.movaphone.data.automation.receiver.AutomationEventBridge
+import com.studiolexair.movaphone.data.messages.provider.SmsIntentFactory
+import com.studiolexair.movaphone.data.messages.source.SmsProviderWriter
 import com.studiolexair.movaphone.data.automation.receiver.SystemEventsRegistrar
 import com.studiolexair.movaphone.data.automation.repository.AutomationRepositoryImpl
 import com.studiolexair.movaphone.data.automation.worker.AutomationWorker
@@ -60,7 +62,17 @@ import com.studiolexair.movaphone.services.notifications.EmergencyAlertSinkImpl
 import com.studiolexair.movaphone.services.notifications.EmergencyServiceDependencies
 import com.studiolexair.movaphone.services.notifications.MovaNotificationChannels
 import com.studiolexair.movaphone.services.notifications.MovaNotifications
+import com.studiolexair.movaphone.data.automation.geofence.GeofenceMonitor
+import com.studiolexair.movaphone.feature.assistant.ai.AssistantPreferences
+import com.studiolexair.movaphone.feature.assistant.ai.LocalModelManager
+import com.studiolexair.movaphone.data.automation.geofence.GeofenceServiceDependencies
+import com.studiolexair.movaphone.data.automation.geofence.GeofenceStore
+import com.studiolexair.movaphone.data.automation.worker.GeofenceCheckWorker
+import com.studiolexair.movaphone.data.location.model.LocationResult
+import com.studiolexair.movaphone.services.calls.CallSessionHolder
 import com.studiolexair.movaphone.services.sms.SmsServiceDependencies
+import com.studiolexair.movaphone.services.wear.CallSessionHolderBridge
+import com.studiolexair.movaphone.services.wear.WearBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -77,6 +89,9 @@ class MovaContainer(
     private val scope: CoroutineScope
 ) {
 
+    /** Contexto de aplicación para los componentes que lo necesitan (modelo local, ajustes). */
+    val applicationContext: Context get() = context.applicationContext
+
     // ---------- Infraestructura ----------
     val database = DatabaseFactory.create(context)
     val settingsStore = MovaSettingsStore(context)
@@ -92,15 +107,25 @@ class MovaContainer(
     val contactsRepository = ContactsRepositoryImpl(database.contactDao(), DeviceContactsDataSource(context))
     val callsRepository = CallsRepositoryImpl(database.callRecordDao(), DeviceCallLogDataSource(context))
     val spamClassifier = SpamClassifierImpl(database.securityDao())
+    /** Escritura en el proveedor del sistema (necesaria si MOVA es la app de mensajes). */
+    val providerWriter = SmsProviderWriter(context)
+
     val messageRepository = MessageRepositoryImpl(
         messageDao = database.messageDao(),
         smsProvider = SmsMessageProvider(context),
-        deviceSms = DeviceSmsDataSource(context)
+        deviceSms = DeviceSmsDataSource(context),
+        intentFactory = SmsIntentFactory(context),
+        providerWriter = providerWriter
     )
     val templateRepository = SmsTemplateRepositoryImpl(database.messageDao())
     val locationRepository = LocationRepositoryImpl(AndroidLocationDataSource(context), database.locationDao())
     val emergencyRepository = EmergencyRepositoryImpl(database.emergencyContactDao(), database.locationDao())
     val automationRepository = AutomationRepositoryImpl(database.automationDao())
+    /** Lugares guardados (geovallas propias, sin Google Play Services). */
+    val geofenceStore = GeofenceStore(context)
+    /** Modelo de lenguaje en el teléfono + preferencias del asistente (sin nube). */
+    val localModelManager = LocalModelManager(context)
+    val assistantPreferences = AssistantPreferences(context)
     val callLauncher = CallLauncherImpl(context)
 
     // ---------- Servicios compartidos ----------
@@ -167,6 +192,22 @@ class MovaContainer(
         enabled = { automationsEnabled }
     )
 
+    /**
+     * Vigilancia de lugares: entra o sale de «Casa», «Trabajo»… y dispara las reglas.
+     * La posición la da el propio teléfono (sin Play Services) y la decisión de entrar o
+     * salir se calcula aquí, en el dispositivo.
+     */
+    val geofenceMonitor = GeofenceMonitor(
+        store = geofenceStore,
+        engine = automationEngine,
+        location = {
+            when (val result = locationRepository.currentLocation()) {
+                is LocationResult.Available -> result.fix.latitude to result.fix.longitude
+                is LocationResult.Unavailable -> null
+            }
+        }
+    )
+
     // ---------- Acciones reutilizadas por la UI ----------
     val placeCall = PlaceCallUseCase(callLauncher)
     val saveContact = SaveContactUseCase(contactsRepository)
@@ -217,16 +258,43 @@ class MovaContainer(
         CallServiceDependencies.automationEngine = automationEngine
         CallServiceDependencies.contactNameResolver = { number -> contactNameCache.resolve(number) }
         CallServiceDependencies.onIncomingCall = { number ->
-            automationEngine.onTrigger(
-                com.studiolexair.movaphone.domain.automation.model.TriggerType.CALL_INCOMING,
-                com.studiolexair.movaphone.domain.automation.repository.TriggerPayload(
-                    number = number,
-                    contactName = contactNameCache.resolve(number)
+            // El número puede llegar vacío en llamadas entrantes ocultas.
+            if (!number.isNullOrBlank()) {
+                val name = contactNameCache.resolve(number)
+                // El reloj Wear OS también recibe el aviso (Bluetooth directo, sin Google).
+                WearBridge.notifyIncomingCall(number, name)
+                automationEngine.onTrigger(
+                    com.studiolexair.movaphone.domain.automation.model.TriggerType.CALL_INCOMING,
+                    com.studiolexair.movaphone.domain.automation.repository.TriggerPayload(
+                        number = number,
+                        contactName = name
+                    )
                 )
-            )
+            }
+        }
+
+        // Órdenes del reloj: contestar, colgar, responder y SOS (confirmado en la muñeca).
+        CallSessionHolderBridge.answer = { CallSessionHolder.state.value.primary?.let { CallSessionHolder.answer(it.id) } }
+        CallSessionHolderBridge.hangUp = { CallSessionHolder.state.value.primary?.let { CallSessionHolder.hangUp(it.id) } }
+        CallSessionHolderBridge.sos = { scope.launch { runCatching { sosOrchestrator.start(trigger = "wear") } } }
+        CallSessionHolderBridge.reply = { to, body ->
+            scope.launch {
+                runCatching {
+                    messageRepository.sendMessage(
+                        address = to,
+                        normalizedAddress = PhoneNumbers.normalize(to),
+                        body = body,
+                        contactName = contactNameCache.resolve(to)
+                    )
+                }
+            }
         }
 
         SmsServiceDependencies.messageRepository = messageRepository
+        SmsServiceDependencies.onSmsReceived = { address, name, body, at ->
+            WearBridge.notifyMessage(address = address, name = name ?: contactNameCache.resolve(address), body = body, at = at)
+        }
+        SmsServiceDependencies.providerWriter = providerWriter
         SmsServiceDependencies.notifier = notifications
         SmsServiceDependencies.automationEngine = automationEngine
         SmsServiceDependencies.contactNameResolver = { number -> contactNameCache.resolve(number) }
@@ -236,7 +304,18 @@ class MovaContainer(
 
         EmergencyServiceDependencies.sosOrchestrator = sosOrchestrator
         AutomationWorkerDependencies.engine = automationEngine
+        GeofenceServiceDependencies.monitor = geofenceMonitor
         AutomationWorkerDependencies.batteryReader = { batteryReader.batteryPercent() }
+
+        // Pantalla de llamada propia: cuando Telecom entrega una llamada, MOVA la muestra.
+        CallServiceDependencies.onShowInCallUi = {
+            val intent = android.content.Intent(context, com.studiolexair.movaphone.feature.incall.InCallActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            runCatching { context.startActivity(intent) }
+        }
+        CallServiceDependencies.onHideInCallUi = {
+            MovaLog.i(TAG, "Llamadas finalizadas: la pantalla de llamada se cierra sola")
+        }
 
         // Disparadores de sistema y de la propia app (conducción, SOS, desbloqueo):
         // el motor de automatizaciones recibe el 100% de los eventos que ofrece el editor.
@@ -266,8 +345,19 @@ class MovaContainer(
             settingsStore.settings.collect { settingsSnapshot = it }
         }
         AutomationWorker.schedule(context)
+        // Los lugares se comprueban cada 15 minutos aunque la app esté cerrada, y también
+        // cada vez que llega una posición nueva mientras MOVA está viva.
+        GeofenceCheckWorker.schedule(context)
+        BackgroundLocationWorker.schedule(context)
         scope.launch {
-            if (settingsSnapshot.storeLocationHistory) BackgroundLocationWorker.schedule(context)
+            // Primera comprobación al abrir: recupera el estado si el teléfono estuvo apagado.
+            runCatching { geofenceMonitor.check() }
+        }
+        scope.launch {
+            while (true) {
+                batteryReader.batteryPercent()?.let { runCatching { WearBridge.notifyBattery(it) } }
+                kotlinx.coroutines.delay(5 * 60 * 1000L)
+            }
         }
         scope.launch { templateRepository.ensureDefaults() }
         scope.launch { runCatching { contactsRepository.importFromDevice() } }

@@ -9,6 +9,7 @@ import com.studiolexair.movaphone.data.messages.model.SenderSummary
 import com.studiolexair.movaphone.data.messages.provider.MessageProvider
 import com.studiolexair.movaphone.data.messages.provider.SmsIntentFactory
 import com.studiolexair.movaphone.data.messages.source.DeviceSmsDataSource
+import com.studiolexair.movaphone.data.messages.source.SmsProviderWriter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -24,7 +25,9 @@ class MessageRepositoryImpl(
     private val messageDao: MessageDao,
     private val smsProvider: MessageProvider,
     private val deviceSms: DeviceSmsDataSource,
-    private val intentFactory: SmsIntentFactory? = null
+    private val intentFactory: SmsIntentFactory? = null,
+    /** Escribe en la base de datos del sistema cuando MOVA es la app de mensajes predeterminada. */
+    private val providerWriter: SmsProviderWriter? = null
 ) {
 
     fun observeConversations(): Flow<List<MessageEntity>> = messageDao.observeConversations()
@@ -77,7 +80,10 @@ class MessageRepositoryImpl(
         )
         // Si el transporte ni siquiera pudo encolar el mensaje se marca como fallido;
         // si lo encoló, la confirmación real llega por el receptor de SMS.
-        if (!result.success) {
+        if (result.success) {
+            // La app de mensajes predeterminada debe reflejar lo enviado en el sistema.
+            providerWriter?.saveOutgoing(address, body, now)
+        } else {
             messageDao.updateState(id, STATE_FAILED)
             MovaLog.w(TAG, "Envío fallido: ${result.errorMessage}")
         }
@@ -97,8 +103,10 @@ class MessageRepositoryImpl(
     }
 
     /** Todos los mensajes entrantes de un número pasan a leído al abrir la conversación. */
-    suspend fun markConversationRead(normalizedAddress: String) =
+    suspend fun markConversationRead(normalizedAddress: String) {
         messageDao.markIncomingRead(normalizedAddress)
+        providerWriter?.markThreadRead(normalizedAddress)
+    }
 
     /** Guarda un mensaje entrante (usado por services:sms al recibir un SMS). */
     suspend fun storeIncoming(message: MessageEntity): Long = messageDao.insert(message)

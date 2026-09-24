@@ -29,6 +29,14 @@ class PermissionChecker(private val context: Context) {
     fun applicable(permissions: List<MovaPermission>): List<MovaPermission> =
         permissions.filter { Build.VERSION.SDK_INT >= it.minSdk }
 
+    /**
+     * Android 10 y anteriores permiten pedir la ubicación en segundo plano con un diálogo.
+     * Desde Android 11 (API 30) **sólo** se puede conceder desde los ajustes de la app:
+     * la pantalla de permisos debe abrir esos ajustes en lugar de pedir un diálogo que no existe.
+     */
+    fun requiresSystemSettings(permission: MovaPermission): Boolean =
+        permission == MovaPermission.BACKGROUND_LOCATION && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+
     fun isCallRecordingAvailable(): Boolean =
         // Requisito 35: la grabación de llamadas sólo se declara disponible cuando el sistema lo permite.
         // En Android 10+ la API pública está limitada y en Android 11+ muchos fabricantes la bloquean.

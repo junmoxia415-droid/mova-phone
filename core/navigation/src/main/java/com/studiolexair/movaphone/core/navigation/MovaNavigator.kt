@@ -51,6 +51,7 @@ class MovaNavigator(private val navController: NavController) {
     fun toAutomation() = navController.navigate(MovaRoutes.AUTOMATION)
     fun toAutomationEditor(ruleId: Long? = null) = navController.navigate(MovaRoutes.automationEditor(ruleId))
     fun toAutomationHistory() = navController.navigate(MovaRoutes.AUTOMATION_HISTORY)
+    fun toAutomationPlaces() = navController.navigate(MovaRoutes.AUTOMATION_PLACES)
 
     fun toSecurity() = navController.navigate(MovaRoutes.SECURITY)
     fun toBlockedNumbers() = navController.navigate(MovaRoutes.BLOCKED_NUMBERS)

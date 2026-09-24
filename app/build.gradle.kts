@@ -59,6 +59,7 @@ dependencies {
     implementation(project(":services:sms"))
     implementation(project(":services:location"))
     implementation(project(":services:notifications"))
+    implementation(project(":services:wear"))
 
     implementation(project(":feature:home"))
     implementation(project(":feature:dialer"))
@@ -74,6 +75,7 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:about"))
     implementation(project(":feature:smart-assistant"))
+    implementation(project(":feature:incall"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.activity.compose)

@@ -1,6 +1,7 @@
 package com.studiolexair.movaphone.domain.contacts.repository
 
 import com.studiolexair.movaphone.domain.contacts.model.Contact
+import com.studiolexair.movaphone.domain.contacts.model.ContactMatch
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -23,6 +24,12 @@ interface ContactsRepository {
 
     /** Importa la agenda del sistema a la base local (requiere permiso de lectura). */
     suspend fun importFromDevice(): Int
-    /** Sugerencias para el marcador a partir de un número parcial. */
+    /** Sugerencias para el marcador a partir de un número o de un nombre dictado. */
     suspend fun suggestions(query: String, limit: Int = 6): List<Contact>
+
+    /**
+     * Mejor coincidencia para una orden hablada o escrita (“llama a nena”, “marca 8747”).
+     * Devuelve también el motivo, para poder decir al usuario por qué eligió ese contacto.
+     */
+    suspend fun bestMatch(query: String): ContactMatch?
 }

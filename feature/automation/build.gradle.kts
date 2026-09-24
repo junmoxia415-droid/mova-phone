@@ -5,5 +5,6 @@ dependencies {
     implementation(project(":domain:contacts"))
     implementation(project(":core:database"))
     implementation(project(":data:automation"))
+    implementation(project(":data:location"))
     testImplementation(libs.truth)
 }

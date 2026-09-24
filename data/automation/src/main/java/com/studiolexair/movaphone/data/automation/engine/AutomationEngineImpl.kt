@@ -28,7 +28,8 @@ class AutomationEngineImpl(
             MovaLog.i(TAG, "Automatizaciones desactivadas: se ignora $type")
             return emptyList()
         }
-        val rules = repository.rulesForTrigger(type).filter { it.enabled }
+        val rules = repository.rulesForTrigger(type)
+            .filter { it.enabled && matchesTriggerValue(it.trigger.value, payload) }
         if (rules.isEmpty()) return emptyList()
 
         val outcomes = rules.map { rule ->
@@ -65,6 +66,16 @@ class AutomationEngineImpl(
         val outcome = AutomationOutcome(rule.id, rule.name, executed = true, success = result.success, detail = result.detail)
         repository.logOutcome(outcome, clock.now())
         return outcome
+    }
+
+    /**
+     * Los disparadores de lugar llevan el nombre del lugar («casa», «trabajo»…).
+     * Si la regla escribe un lugar concreto, sólo se ejecuta al entrar o salir de ESE lugar;
+     * si no escribe nada, se ejecuta con cualquier lugar guardado.
+     */
+    private fun matchesTriggerValue(value: String?, payload: TriggerPayload): Boolean {
+        if (value.isNullOrBlank() || payload.contactName.isNullOrBlank()) return true
+        return payload.contactName.equals(value.trim(), ignoreCase = true)
     }
 
     private companion object {

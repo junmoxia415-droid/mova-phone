@@ -68,6 +68,7 @@ fun PermissionsScreen(
         PermissionGroup(MovaPermission.RECEIVE_SMS, Icons.Filled.Message, "Recibir SMS", "Avisarte de mensajes nuevos y respuestas a tus alertas."),
         PermissionGroup(MovaPermission.COARSE_LOCATION, Icons.Filled.LocationOn, "Ubicación aproximada", "Ubicación de respaldo si el GPS no está disponible."),
         PermissionGroup(MovaPermission.FINE_LOCATION, Icons.Filled.LocationOn, "Ubicación precisa", "Compartir tu posición exacta en el protocolo SOS."),
+        PermissionGroup(MovaPermission.BACKGROUND_LOCATION, Icons.Filled.LocationOn, "Ubicación en segundo plano", "Seguir avisando de tu posición en una emergencia con la pantalla apagada. Android lo pide aparte."),
         PermissionGroup(MovaPermission.POST_NOTIFICATIONS, Icons.Filled.Notifications, "Notificaciones", "Avisos de emergencia, mensajes y automatizaciones."),
         PermissionGroup(MovaPermission.RECORD_AUDIO, Icons.Filled.Emergency, "Micrófono", "Sólo para los comandos de voz del asistente y del modo conducción."),
         PermissionGroup(MovaPermission.ANSWER_PHONE_CALLS, Icons.Filled.Emergency, "Atender llamadas", "Contestar o rechazar desde MOVA cuando el manos libres lo permite.")

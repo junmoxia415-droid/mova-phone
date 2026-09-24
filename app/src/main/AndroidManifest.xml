@@ -6,6 +6,7 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <!-- Permisos mínimos, explicados en la app y solicitados sólo cuando se usan. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
@@ -15,6 +16,10 @@
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Ubicación con la pantalla apagada durante una emergencia (se pide aparte, desde Ajustes). -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Voz: los comandos se transcriben en el dispositivo, sin enviar audio a ningún sitio. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -72,5 +77,78 @@
                 <data android:scheme="tel" />
             </intent-filter>
         </activity>
+
+        <!--
+          MOVA como aplicación de mensajes del sistema: Android exige esta actividad con
+          sms:, smsto:, mms:, mmsto: para conceder el rol de app de SMS predeterminada.
+        -->
+        <activity
+            android:name=".ui.SendToActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.MovaPhone.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- Widgets de la pantalla de inicio (requisito 10) -->
+        <receiver
+            android:name=".widget.MovaFavoritesWidget"
+            android:exported="true"
+            android:label="@string/widget_favorites_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mova_widget_favorites_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.MovaSosWidget"
+            android:exported="true"
+            android:label="@string/widget_sos_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mova_widget_sos_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.MovaSummaryWidget"
+            android:exported="true"
+            android:label="@string/widget_summary_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.studiolexair.movaphone.widget.REFRESH_SUMMARY" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mova_widget_summary_info" />
+        </receiver>
     </application>
 </manifest>

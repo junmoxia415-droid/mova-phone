@@ -21,6 +21,11 @@ class BackgroundLocationWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        // 1) Los lugares guardados se comprueban siempre que haya una posición:
+        //    es lo que hace que «llegar a casa» o «salir del trabajo» se disparen de verdad.
+        runCatching { com.studiolexair.movaphone.data.automation.geofence.GeofenceServiceDependencies.monitor?.check() }
+            .onFailure { MovaLog.w(TAG, "No se pudieron comprobar los lugares en segundo plano") }
+
         val repository = LocationServiceDependencies.locationRepository ?: return Result.success()
         val enabled = LocationServiceDependencies.locationHistoryEnabled?.invoke() ?: false
         if (!enabled) {

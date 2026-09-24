@@ -58,9 +58,35 @@ class SecurityViewModel(
     }
 
     // ---------- Ajustes de seguridad ----------
+    /**
+     * Activar el bloqueo **exige** un método de desbloqueo real (PIN o biometría).
+     * Antes se podía activar sin PIN y el usuario quedaba encerrado fuera de la app.
+     */
     fun setAppLock(enabled: Boolean) = viewModelScope.launch {
+        if (enabled) {
+            val current = settingsStore.settings.first()
+            val hasPin = pinManager.isPinSet()
+            val hasBiometric = current.biometricEnabled && biometricManager.isAvailable()
+            if (!hasPin && !hasBiometric) {
+                settingsStore.setAppLock(false)
+                messageState.value = "Para activar el bloqueo crea antes un PIN (o activa la biometría). " +
+                    "Así nunca te quedarás fuera de MOVA Phone."
+                return@launch
+            }
+        }
         settingsStore.setAppLock(enabled)
         eventLogger.log(SecurityEventType.PRIVATE_MODE_TOGGLED, if (enabled) "Bloqueo de app activado" else "Bloqueo de app desactivado")
+    }
+
+    /** El usuario olvidó el PIN: se desactiva el bloqueo para poder entrar (los datos no se borran). */
+    fun resetAppLock() = viewModelScope.launch {
+        pinManager.clearPin()
+        pinIsSet.value = false
+        settingsStore.setPinEnabled(false)
+        settingsStore.setAppLock(false)
+        settingsStore.setBiometric(false)
+        eventLogger.log(SecurityEventType.PIN_FAILED, "Bloqueo restablecido por el usuario", com.studiolexair.movaphone.core.security.event.Severity.WARNING)
+        messageState.value = "Bloqueo restablecido: ya puedes entrar sin PIN. Vuelve a crear uno cuando quieras."
     }
 
     fun setPrivateMode(enabled: Boolean) = viewModelScope.launch {
@@ -92,7 +118,11 @@ class SecurityViewModel(
         if (ok) {
             settingsStore.setPinEnabled(true)
             eventLogger.log(SecurityEventType.PIN_CHANGED, "PIN de la aplicación actualizado")
-            messageState.value = "PIN guardado"
+            messageState.value = if (settingsStore.settings.first().appLockEnabled) {
+                "PIN guardado."
+            } else {
+                "PIN guardado. Ya puedes activar el bloqueo de la aplicación."
+            }
         } else {
             messageState.value = "El PIN debe tener al menos 4 dígitos."
         }
@@ -112,7 +142,14 @@ class SecurityViewModel(
         pinManager.clearPin()
         pinIsSet.value = false
         settingsStore.setPinEnabled(false)
-        messageState.value = "PIN eliminado"
+        // Sin PIN no puede quedar bloqueo activo: se desactiva para que nadie se quede fuera.
+        val current = settingsStore.settings.first()
+        if (current.appLockEnabled && !current.biometricEnabled) {
+            settingsStore.setAppLock(false)
+            messageState.value = "PIN borrado y bloqueo desactivado, para que no te quedes fuera de MOVA Phone."
+        } else {
+            messageState.value = "PIN eliminado"
+        }
     }
 
     // ---------- Números bloqueados ----------

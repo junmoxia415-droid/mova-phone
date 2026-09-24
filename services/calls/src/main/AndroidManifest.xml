@@ -17,6 +17,26 @@
             </intent-filter>
         </service>
 
+        <!--
+          MOVA Phone como aplicación de teléfono del sistema.
+          Con el rol de teléfono concedido, Android entrega aquí TODAS las llamadas y
+          MOVA muestra su propia pantalla de llamada (sin abrir la del sistema).
+        -->
+        <service
+            android:name=".MovaInCallService"
+            android:exported="true"
+            android:permission="android.permission.BIND_INCALL_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.InCallService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.telecom.IN_CALL_SERVICE_UI"
+                android:value="true" />
+            <meta-data
+                android:name="android.telecom.IN_CALL_SERVICE_RINGING"
+                android:value="true" />
+        </service>
+
         <receiver
             android:name=".CallStateReceiver"
             android:exported="true"

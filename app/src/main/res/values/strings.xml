@@ -2,4 +2,22 @@
 <resources>
     <string name="app_name">MOVA Phone</string>
     <string name="app_developer">Studio Lexair</string>
+
+    <!-- Widgets de la pantalla de inicio -->
+    <string name="widget_favorites_title">Favoritos MOVA</string>
+    <string name="widget_favorites_empty">Marca contactos como favoritos y aparecerán aquí para llamar o escribir.</string>
+    <string name="widget_favorites_description">Llama o escribe a tus contactos favoritos desde la pantalla de inicio.</string>
+    <string name="widget_open">Abrir MOVA</string>
+    <string name="widget_call">Llamar</string>
+    <string name="widget_sms">Mensaje</string>
+    <string name="widget_sos_title">Emergencia MOVA</string>
+    <string name="widget_sos_button">SOS</string>
+    <string name="widget_sos_hint">Abre el protocolo de emergencia y confírmalo</string>
+    <string name="widget_sos_description">Botón SOS: abre la emergencia de MOVA con un toque.</string>
+    <string name="widget_summary_title">Te han escrito</string>
+    <string name="widget_refresh">Actualizar</string>
+    <string name="widget_messages_placeholder">Comprobando mensajes…</string>
+    <string name="widget_calls_placeholder">Comprobando llamadas…</string>
+    <string name="widget_summary_hint">Toca para abrir tus conversaciones en MOVA</string>
+    <string name="widget_summary_description">Resumen de mensajes pendientes y llamadas perdidas.</string>
 </resources>

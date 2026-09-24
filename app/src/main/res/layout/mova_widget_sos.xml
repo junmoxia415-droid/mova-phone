@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget SOS: emergencia a un toque desde la pantalla de inicio. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/mova_widget_bg"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_sos_title"
+        android:textColor="#E6EDF7"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_sos_button"
+        android:layout_width="86dp"
+        android:layout_height="86dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/mova_widget_sos_bg"
+        android:gravity="center"
+        android:text="@string/widget_sos_button"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/widget_sos_hint"
+        android:textColor="#94A3B8"
+        android:textSize="11sp" />
+</LinearLayout>

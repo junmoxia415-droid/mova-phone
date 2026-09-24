@@ -48,7 +48,11 @@ import kotlinx.coroutines.launch
  * protege MOVA Phone con PIN o biometría.
  */
 @Composable
-fun MovaApp(container: MovaContainer) {
+fun MovaApp(
+    container: MovaContainer,
+    deepLink: com.studiolexair.movaphone.widget.WidgetDeepLink? = null,
+    onDeepLinkHandled: () -> Unit = {}
+) {
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(initialValue = MovaSettings.DEFAULT)
     val navController = rememberNavController()
     val navigator = remember(navController) { MovaNavigator(navController) }
@@ -56,6 +60,26 @@ fun MovaApp(container: MovaContainer) {
     val scope = rememberCoroutineScope()
 
     var showSplash by remember { mutableStateOf(true) }
+
+    // Toques de los widgets: se navega cuando la app ya está lista (sin saltarse el splash).
+    LaunchedEffect(deepLink, showSplash) {
+        val link = deepLink ?: return@LaunchedEffect
+        if (showSplash) return@LaunchedEffect
+        when {
+            link.route == com.studiolexair.movaphone.widget.WidgetDeepLink.ROUTE_SOS -> navigator.toSos()
+            link.route == com.studiolexair.movaphone.widget.WidgetDeepLink.ROUTE_MESSAGES -> navigator.toMessages()
+            !link.number.isNullOrBlank() -> navigator.toDialer(link.number)
+            !link.address.isNullOrBlank() -> navigator.toConversation(link.address)
+            else -> navigator.toHome()
+        }
+        onDeepLinkHandled()
+    }
+
+    // Los widgets se refrescan al abrir la app y el puente del reloj arranca si está activado.
+    LaunchedEffect(Unit) {
+        com.studiolexair.movaphone.widget.WidgetUpdater.updateAll(context)
+        com.studiolexair.movaphone.services.wear.MovaWearBridgeService.startIfEnabled(context)
+    }
 
     val openSystemSettings: () -> Unit = {
         val intent = Intent(
@@ -71,7 +95,10 @@ fun MovaApp(container: MovaContainer) {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_STOP -> container.appLockController.onAppBackgrounded()
+                Lifecycle.Event.ON_STOP -> {
+                    container.appLockController.onAppBackgrounded()
+                    com.studiolexair.movaphone.widget.WidgetUpdater.updateAll(context)
+                }
                 Lifecycle.Event.ON_START -> container.appLockController.onAppForegrounded(settings.lockTimeoutSeconds)
                 else -> Unit
             }

@@ -29,6 +29,7 @@ object MovaRoutes {
     const val AUTOMATION = "automation"
     const val AUTOMATION_EDITOR = "automation/editor?ruleId={ruleId}"
     const val AUTOMATION_HISTORY = "automation/history"
+    const val AUTOMATION_PLACES = "automation/places"
 
     const val SECURITY = "security"
     const val BLOCKED_NUMBERS = "security/blocked"

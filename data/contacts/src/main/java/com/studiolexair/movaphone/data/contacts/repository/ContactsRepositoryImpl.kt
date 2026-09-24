@@ -4,7 +4,9 @@ import com.studiolexair.movaphone.core.database.dao.ContactDao
 import com.studiolexair.movaphone.core.logging.MovaLog
 import com.studiolexair.movaphone.data.contacts.mapper.ContactMapper
 import com.studiolexair.movaphone.data.contacts.source.DeviceContactsDataSource
+import com.studiolexair.movaphone.domain.contacts.matcher.ContactMatcher
 import com.studiolexair.movaphone.domain.contacts.model.Contact
+import com.studiolexair.movaphone.domain.contacts.model.ContactMatch
 import com.studiolexair.movaphone.domain.contacts.repository.ContactsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -98,8 +100,23 @@ class ContactsRepositoryImpl(
     override suspend fun suggestions(query: String, limit: Int): List<Contact> {
         val normalized = query.trim()
         if (normalized.isEmpty()) return emptyList()
-        // Lectura puntual para el marcador: se limita el número de sugerencias.
+
+        val all = contactDao.allOnce().map(ContactMapper::toDomain)
+        if (all.isEmpty()) return emptyList()
+
+        // 1) Coincidencia «humana»: sin acentos, sin emoji, tolerante a errores de dictado.
+        val ranked = ContactMatcher.rank(normalized, all, limit)
+        if (ranked.isNotEmpty()) return ranked
+
+        // 2) Respaldo: consulta SQL clásica por si la anterior no encuentra nada.
         return contactDao.search(normalized).first().take(limit).map(ContactMapper::toDomain)
+    }
+
+    /** Mejor coincidencia con explicación (lo usa el asistente para decir a quién llamó). */
+    override suspend fun bestMatch(query: String): ContactMatch? {
+        val all = contactDao.allOnce().map(ContactMapper::toDomain)
+        val match = ContactMatcher.best(query, all) ?: return null
+        return ContactMatch(match.contact, match.reason)
     }
 
     private companion object {

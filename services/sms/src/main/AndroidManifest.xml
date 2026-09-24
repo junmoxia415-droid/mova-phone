@@ -15,6 +15,30 @@
             </intent-filter>
         </receiver>
 
+        <!--
+          MOVA Phone como aplicación de MENSAJES predeterminada.
+          SMS_DELIVER y WAP_PUSH_DELIVER son los avisos que Android envía a la app de
+          mensajes del sistema: con ellos MOVA recibe y guarda los SMS por su cuenta.
+        -->
+        <receiver
+            android:name=".SmsDeliverReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_DELIVER" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".MmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_WAP_PUSH">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />
+                <data android:mimeType="application/vnd.wap.mms-message" />
+            </intent-filter>
+        </receiver>
+
         <!-- Confirmación real del envío de SMS (uso interno de la app). -->
         <receiver
             android:name=".MovaSmsSentReceiver"

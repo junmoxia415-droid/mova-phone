@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
@@ -72,15 +73,17 @@ import com.studiolexair.movaphone.core.permissions.rememberPermissionHandle
 fun ConversationRoute(
     address: String,
     viewModel: MessagesViewModel,
-    navigator: MovaNavigator,
+    navigator: MovaNavigator?,
     contactName: String? = null,
+    prefill: String = "",
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val messages by viewModel.conversation(address).collectAsStateWithLifecycle()
     val status by viewModel.statusMessage.collectAsStateWithLifecycle()
     val lastFailure by viewModel.lastFailedId.collectAsStateWithLifecycle()
 
-    var draft by remember(address) { mutableStateOf("") }
+    var draft by remember(address, prefill) { mutableStateOf(prefill) }
     var pendingSend by remember(address) { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf<MessageEntity?>(null) }
     var toDelete by remember { mutableStateOf<MessageEntity?>(null) }
@@ -109,13 +112,23 @@ fun ConversationRoute(
                 title = contactName?.takeIf { it.isNotBlank() } ?: address,
                 subtitle = address,
                 actions = {
+                    if (onClose != null) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Cerrar",
+                            tint = MovaTheme.extra.textSecondary,
+                            modifier = Modifier
+                                .padding(end = MovaDimens.spaceSm)
+                                .clickable { onClose() }
+                        )
+                    }
                     Icon(
                         imageVector = Icons.Filled.Call,
                         contentDescription = "Llamar",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .padding(end = MovaDimens.spaceSm)
-                            .clickable { navigator.toDialer(address) }
+                            .clickable { navigator?.toDialer(address) }
                     )
                 }
             )
@@ -226,7 +239,7 @@ fun ConversationRoute(
             address = address,
             contactName = contactName,
             onDismiss = { detail = null },
-            onCall = { navigator.toDialer(address) },
+            onCall = { navigator?.toDialer(address) },
             onDelete = {
                 viewModel.delete(entity.id)
                 detail = null

@@ -100,4 +100,10 @@ object SmsServiceDependencies {
 
     /** Último mensaje enviado (respaldo si el sistema no conserva los extras del Intent). */
     @Volatile var lastSentMessageId: Long? = null
+
+    /** Escritura en el proveedor del sistema cuando MOVA es la app de mensajes predeterminada. */
+    @Volatile var providerWriter: com.studiolexair.movaphone.data.messages.source.SmsProviderWriter? = null
+
+    /** Aviso a otros dispositivos del usuario (reloj Wear OS). Nunca envía datos a Internet. */
+    @Volatile var onSmsReceived: ((address: String, contactName: String?, body: String, at: Long) -> Unit)? = null
 }

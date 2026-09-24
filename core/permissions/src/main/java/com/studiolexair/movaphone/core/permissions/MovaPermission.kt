@@ -70,6 +70,18 @@ enum class MovaPermission(
         "Para avisarte de emergencias, automatizaciones y mensajes importantes.",
         minSdk = Build.VERSION_CODES.TIRAMISU
     ),
+    BLUETOOTH_CONNECT(
+        Manifest.permission.BLUETOOTH_CONNECT,
+        "Conectar con tu reloj",
+        "Para que MOVA Phone pueda hablar con tu reloj Wear OS (llamadas, mensajes y SOS) por Bluetooth.",
+        minSdk = 31
+    ),
+    BLUETOOTH_ADVERTISE(
+        Manifest.permission.BLUETOOTH_ADVERTISE,
+        "Anunciar MOVA al reloj",
+        "Para que tu reloj encuentre el teléfono por Bluetooth cuando quieras conectar.",
+        minSdk = 31
+    ),
     RECORD_AUDIO(
         Manifest.permission.RECORD_AUDIO,
         "Micrófono",
